@@ -59,21 +59,27 @@ def build_subway_graph(data_dir):
     for s in stops:
         sid = str(s.get('stop_id') or s.get('ID')).strip()
         if sid in valid_stations:
-            G.add_node(
-                f"rail_{sid}",
-                stop_lat=float(s.get('stop_lat') or s.get('LAT')),
-                stop_lon=float(s.get('stop_lon') or s.get('LON')),
-                name=s.get('stop_name') or s.get('NAME'),
-                mode="rail"
-            )
+            try:
+                lat = float(s.get('stop_lat') or s.get('LAT'))
+                lon = float(s.get('stop_lon') or s.get('LON'))
+                G.add_node(
+                    f"rail_{sid}",
+                    stop_lat=lat,
+                    stop_lon=lon,
+                    name=s.get('stop_name') or s.get('NAME'),
+                    mode="rail"
+                )
+            except (ValueError, TypeError) as e:
+                print(f"⚠️ Lỗi thêm node {sid}: {e}")
+                continue
 
     # 4. Add edges (2 chiều)
     for lid, stations in mrt_seq.items():
         stations.sort(key=lambda x: int(x.get('STOP_SEQUENCE') or 0))
 
         for i in range(len(stations) - 1):
-            u = f"rail_{stations[i].get('STATION_ID')}"
-            v = f"rail_{stations[i+1].get('STATION_ID')}"
+            u = f"rail_{str(stations[i].get('STATION_ID') or '').strip()}"
+            v = f"rail_{str(stations[i+1].get('STATION_ID') or '').strip()}"
 
             if not (G.has_node(u) and G.has_node(v)):
                 continue
@@ -92,8 +98,12 @@ def build_subway_graph(data_dir):
 # ================= WALK GRAPH =================
 def build_walk_graph():
     print("🚧 Download WALK graph from OSM...")
-
-    G_walk = ox.graph_from_place("Bangkok, Thailand", network_type="walk")
+    try:
+        G_walk = ox.graph_from_place("Bangkok, Thailand", network_type="walk")
+    except Exception as e:
+        print(f"❌ Không thể tải WALK graph: {e}")
+        print("⚠️ Bỏ qua WALK graph (chỉ dùng RAIL + TRANSFER)")
+        return
 
     # convert → loại multi-edge + đảm bảo đơn giản
     G_walk = nx.Graph(G_walk)

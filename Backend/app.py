@@ -1,6 +1,7 @@
 """
-app.py – Flask backend cho Bangkok MRT Route Finder.
-Hỗ trợ API tìm đường và quản lý kịch bản sự cố (admin).
+main_app.py – Flask backend cho Bangkok MRT Route Finder.
+Sử dụng A* (astar.py) để tìm đường.
+Chỉ tải đồ thị từ cache (graph.pkl). Nếu chưa có cache, hãy chạy Build_graph.py trước.
 """
 
 import os
@@ -8,13 +9,14 @@ import json
 import threading
 import logging
 from pathlib import Path
+from math import radians, cos, sin, asin, sqrt
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import networkx as nx
-from flask import send_from_directory
-import os
-from Build_graph import build_graph, load_graph
+
+from Build_graph import load_graph  # chỉ import load, không import build
+from A_star import astar_route        # đảm bảo astar.py nằm cùng thư mục
 
 # ----------------------------------------------------------------------
 # Logging
@@ -27,11 +29,7 @@ log = logging.getLogger(__name__)
 # Flask app
 # ----------------------------------------------------------------------
 app = Flask(__name__)
-@app.route("/")
-def serve_index():
-    frontend_dir = os.path.join(os.path.dirname(__file__), "..", "Frontend")
-    return send_from_directory(frontend_dir, "index.html")
-CORS(app)  # Cho phép frontend gọi API từ domain/port khác
+CORS(app)
 
 # ----------------------------------------------------------------------
 # Global state (thread-safe)
@@ -40,49 +38,88 @@ global _graph
 _graph = None
 _graph_lock = threading.Lock()
 
-# Trạng thái sự cố
+# Trạng thái sự cố (admin)
 _blocked_nodes = set()          # set các stop_id bị đóng
 _blocked_edges = set()          # set các (u, v) với u, v là stop_id
 _transfer_issues = {}           # dict {stop_id: severity}
 _admin_lock = threading.Lock()
 
-
-@app.route("/<path:filename>")
-def serve_static(filename):
-    frontend_dir = os.path.join(os.path.dirname(__file__), "..", "Frontend")
-    return send_from_directory(frontend_dir, filename)
 # ----------------------------------------------------------------------
-# Helper – lấy đồ thị
+# Helper functions
 # ----------------------------------------------------------------------
 def get_graph():
-    if _graph is None:
-        raise RuntimeError("Đồ thị chưa được tải xong.")
-    return _graph
+    """Trả về đồ thị nếu đã sẵn sàng."""
+    with _graph_lock:
+        if _graph is None:
+            raise RuntimeError("Đồ thị chưa được tải. Hãy chạy Build_graph.py trước.")
+        return _graph
+
+def _get_node_coords(G, node):
+    """Lấy tọa độ (lat, lng) từ node."""
+    data = G.nodes[node]
+    lat = data.get('stop_lat') or data.get('y')
+    lng = data.get('stop_lon') or data.get('x')
+    return lat, lng
+
+def _haversine(lat1, lng1, lat2, lng2):
+    R = 6371000
+    dlat = radians(lat2 - lat1)
+    dlng = radians(lng2 - lng1)
+    a = sin(dlat/2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlng/2)**2
+    return 2 * R * asin(sqrt(a))
+
+def _find_nearest_node(G, lat, lng):
+    """Tìm node (walk hoặc rail) gần nhất với tọa độ, dùng Haversine."""
+    best_node = None
+    best_dist = float('inf')
+    for node, data in G.nodes(data=True):
+        nlat, nlng = _get_node_coords(G, node)
+        if nlat is None or nlng is None:
+            continue
+        d = _haversine(lat, lng, nlat, nlng)
+        if d < best_dist:
+            best_dist = d
+            best_node = node
+    return best_node
 
 # ----------------------------------------------------------------------
-# Load đồ thị lúc khởi động (background nếu cần, nhưng ở đây làm đồng bộ)
+# Tải đồ thị từ cache (chỉ một lần khi khởi động)
 # ----------------------------------------------------------------------
 def init_graph():
     global _graph
-    G = None
+    G = load_graph()
     if G is None:
-        log.info("Chưa có cache, build đồ thị mới...")
-        data_dir = Path(__file__).resolve().parent.parent / "DATA"
-        if not data_dir.exists():
-            raise FileNotFoundError(f"Thư mục DATA không tồn tại: {data_dir}")
-        G = build_graph(str(data_dir))
+        raise FileNotFoundError(
+            "Không tìm thấy file cache/graph.pkl. "
+            "Hãy chạy Build_graph.py để tạo đồ thị trước khi khởi động server."
+        )
     with _graph_lock:
         _graph = G
-    log.info("Đồ thị đã sẵn sàng: %d nút, %d cạnh", G.number_of_nodes(), G.number_of_edges())
+    log.info("Đồ thị đã tải từ cache: %d nút, %d cạnh", G.number_of_nodes(), G.number_of_edges())
 
-# Chạy init ngay khi import (có thể lâu, nhưng đảm bảo sẵn sàng)
 try:
     init_graph()
 except Exception as e:
-    log.error("Không thể khởi tạo đồ thị: %s", e)
+    log.error("Không thể tải đồ thị: %s", e)
+    # Server vẫn chạy, các API sẽ báo lỗi 503
 
 # ----------------------------------------------------------------------
-# API – Lấy danh sách trạm MRT (cho frontend map)
+# API – Trang chủ (phục vụ index.html)
+# ----------------------------------------------------------------------
+@app.route("/")
+def index():
+    from flask import send_from_directory
+    frontend_dir = Path(__file__).resolve().parent.parent  # lên 1 cấp (IT3160-Project)
+    return send_from_directory(str(frontend_dir), "index.html")
+
+@app.route("/<path:filename>")
+def static_files(filename):
+    from flask import send_from_directory
+    frontend_dir = Path(__file__).resolve().parent.parent
+    return send_from_directory(str(frontend_dir), filename)
+
+# ----------------------------------------------------------------------
+# API – Lấy danh sách trạm MRT
 # ----------------------------------------------------------------------
 @app.route("/api/stations")
 def api_stations():
@@ -101,10 +138,39 @@ def api_stations():
                 "stop_lat": data.get("stop_lat") or data.get("y"),
                 "stop_lon": data.get("stop_lon") or data.get("x"),
             })
-    return jsonify(stations)
+    return jsonify({"stations": stations})
 
 # ----------------------------------------------------------------------
-# API – Tìm đường (dùng stop_id)
+# API – Tìm node gần nhất từ tọa độ (dùng khi click trên map)
+# ----------------------------------------------------------------------
+@app.route("/api/nearest_node", methods=["POST"])
+def nearest_node():
+    try:
+        G = get_graph()
+    except RuntimeError:
+        return jsonify({"error": "Đồ thị chưa sẵn sàng"}), 503
+
+    data = request.get_json(force=True)
+    lat = data.get("lat")
+    lng = data.get("lng")
+    if lat is None or lng is None:
+        return jsonify({"error": "Thiếu lat hoặc lng"}), 400
+
+    node = _find_nearest_node(G, float(lat), float(lng))
+    if node is None:
+        return jsonify({"error": "Không tìm thấy node"}), 404
+
+    node_data = G.nodes[node]
+    return jsonify({
+        "node_id": node,
+        "name": node_data.get("name", ""),
+        "lat": _get_node_coords(G, node)[0],
+        "lng": _get_node_coords(G, node)[1],
+        "mode": node_data.get("mode", "walk")
+    })
+
+# ----------------------------------------------------------------------
+# API – Tìm đường (sử dụng A*)
 # ----------------------------------------------------------------------
 @app.route("/api/find_route", methods=["POST"])
 def find_route():
@@ -114,81 +180,80 @@ def find_route():
         return jsonify({"error": "Đồ thị chưa sẵn sàng"}), 503
 
     data = request.get_json(force=True)
+    # Có thể truyền start_node/end_node trực tiếp, hoặc start/end (stop_id)
     start_id = str(data.get("start", "")).strip()
     end_id   = str(data.get("end", "")).strip()
+    start_node = data.get("start_node")
+    end_node   = data.get("end_node")
 
-    log.info(f"find_route request: start_id={start_id}, end_id={end_id}")
-
-    if not start_id or not end_id:
-        return jsonify({"error": "Thiếu start hoặc end"}), 400
-
-    # Map sang node trong đồ thị
-    start_node = f"rail_{start_id}"
-    end_node   = f"rail_{end_id}"
-
-    log.info(f"Checking nodes: start_node={start_node}, end_node={end_node}")
-    log.info(f"Graph has {len(G)} nodes. Sample nodes: {list(G.nodes())[:5]}")
+    # Nếu không có node trực tiếp thì tìm theo stop_id
+    if not start_node:
+        if start_id:
+            start_node = f"rail_{start_id}"
+        else:
+            return jsonify({"error": "Thiếu start_node hoặc start"}), 400
+    if not end_node:
+        if end_id:
+            end_node = f"rail_{end_id}"
+        else:
+            return jsonify({"error": "Thiếu end_node hoặc end"}), 400
 
     if start_node not in G or end_node not in G:
-        return jsonify({"error": "Không tìm thấy trạm yêu cầu"}), 404
+        return jsonify({"error": f"Node không tồn tại: {start_node} hoặc {end_node}"}), 404
+
+    # Lấy tọa độ
+    start_lat, start_lng = _get_node_coords(G, start_node)
+    end_lat, end_lng     = _get_node_coords(G, end_node)
+
+    if None in (start_lat, start_lng, end_lat, end_lng):
+        return jsonify({"error": "Node thiếu tọa độ"}), 500
 
     # Lấy trạng thái sự cố hiện tại
     with _admin_lock:
         blocked_nodes = set(_blocked_nodes)
         blocked_edges = set(_blocked_edges)
-        # transfer_issues có thể dùng để tăng thời gian chuyển tuyến (tạm bỏ qua)
 
-    # Tạo bản sao đồ thị để không làm hỏng đồ thị gốc
-    H = G.copy()
-
-    # Loại bỏ các node bị đóng (trạm đóng cửa hoàn toàn)
-    nodes_to_remove = [f"rail_{nid}" for nid in blocked_nodes]
-    H.remove_nodes_from(nodes_to_remove)
-
-    # Loại bỏ các cạnh bị chặn
-    edges_to_remove = []
+    # Chuyển đổi sang định dạng A* cần
+    skipped_stations = {f"rail_{nid}" for nid in blocked_nodes}
+    blocked_edges_set = set()
     for u, v in blocked_edges:
         ru = f"rail_{u}"
         rv = f"rail_{v}"
-        if H.has_edge(ru, rv):
-            edges_to_remove.append((ru, rv))
-        if H.has_edge(rv, ru):
-            edges_to_remove.append((rv, ru))
-    H.remove_edges_from(edges_to_remove)
+        blocked_edges_set.add((ru, rv))
+        blocked_edges_set.add((rv, ru))
 
-    # Kiểm tra node start/end còn tồn tại không
-    if start_node not in H or end_node not in H:
-        return jsonify({"error": "Trạm đi hoặc đến đang bị đóng"}), 400
-
-    # Tìm đường ngắn nhất (dùng travel_time làm trọng số)
     try:
-        path = nx.shortest_path(H, source=start_node, target=end_node, weight="travel_time")
-    except nx.NetworkXNoPath:
-        return jsonify({"error": "Không tìm thấy đường đi"}), 404
+        result = astar_route(
+            G,
+            start_lat, start_lng,
+             end_lat, end_lng,
+            mode="multimodal",
+            blocked=blocked_edges_set,
+            skipped_stations=skipped_stations,
+            start_node=start_node,    # <-- thêm
+            end_node=end_node         # <-- thêm
+        )
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 404
+    except Exception as e:
+        log.exception("Lỗi khi chạy A*")
+        return jsonify({"error": "Lỗi máy chủ nội bộ"}), 500
 
-    # Tính tổng khoảng cách và thời gian
-    total_dist = 0.0
-    total_time = 0.0
-    for i in range(len(path)-1):
-        u, v = path[i], path[i+1]
-        edge_data = H[u][v]
-        total_dist += edge_data.get("length", 0)
-        total_time += edge_data.get("travel_time", 0)
+    # Lấy danh sách path nodes (đã được astar.py trả về)
+    path_nodes = result.get("path_nodes", [])
+    # Lọc rail node để hiển thị danh sách trạm
+    rail_path = [n for n in path_nodes if n.startswith("rail_")]
 
-    # Lấy tên trạm
-    start_name = G.nodes[start_node].get("name", start_id)
-    end_name   = G.nodes[end_node].get("name", end_id)
+    # Tên điểm
+    start_name = G.nodes[start_node].get("name") if start_node in G else start_node
+    end_name   = G.nodes[end_node].get("name") if end_node in G else end_node
 
-    # Chuyển path thành list stop_id (bỏ prefix rail_)
-    path_ids = [node.replace("rail_", "") for node in path]
-
-    log.info(f"Route found: {start_name} -> {end_name}, {len(path_ids)} stops")
     return jsonify({
         "start": start_name,
         "end": end_name,
-        "path": path_ids,
-        "distance": round(total_dist / 1000.0, 2),      # km
-        "estimated_time": round(total_time / 60.0, 1)   # phút
+        "path": [n.replace("rail_", "") for n in rail_path],
+        "distance": round(result.get("distance_m", 0) / 1000.0, 2),
+        "estimated_time": round(result.get("time_s", 0) / 60.0, 1)
     })
 
 # ----------------------------------------------------------------------
@@ -221,7 +286,6 @@ def admin_edge_outage():
         # Edge format: "LineId_StationA_StationB" (từ admin.js)
         parts = edge_str.split("_")
         if len(parts) >= 3:
-            # Phần đầu là LineId, hai phần cuối là StationA, StationB
             u = parts[-2]
             v = parts[-1]
             parsed_edges.add((u, v))

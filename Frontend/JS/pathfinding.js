@@ -8,15 +8,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 1. LẮNG NGHE NÚT TÌM ĐƯỜNG ---
     findRouteBtn.addEventListener('click', async () => {
-        // 👉 SỬA LỖI 1: Đổi thành startData và endData cho khớp với map.js
-        if (!window.startData || !window.endData) {
+        if (!window.startStation || !window.endStation) {
             alert("Vui lòng click chọn điểm đi và điểm đến trên bản đồ!");
             return;
         }
 
-        // Lấy ID trạm từ 2 biến mới
-        const startId = String(window.startData.stop_id || window.startData.ID).trim();
-        const endId = String(window.endData.stop_id || window.endData.ID).trim();
+        const startId = String(window.startStation.stop_id || window.startStation.ID).trim();
+        const endId = String(window.endStation.stop_id || window.endStation.ID).trim();
 
         routeText.innerText = "Đang nhờ AI tìm đường ngắn nhất...";
         findRouteBtn.disabled = true;
@@ -32,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const resultData = await response.json();
             
             if (!response.ok) {
-                throw new Error(resultData.error || "Máy chủ AI từ chối trả lời");
+                throw new Error(resultData.message || "Máy chủ AI từ chối trả lời");
             }
             
             // Cập nhật thông tin ra Sidebar
@@ -60,22 +58,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- 2. BỔ SUNG LỆNH XÓA ĐƯỜNG VẼ CHO NÚT CLEAR ---
-    if (clearBtn) {
-        clearBtn.addEventListener('click', () => {
-            if (currentRouteLine) {
-                // 👉 SỬA LỖI 2: Dùng window.map thay vì map
-                window.map.removeLayer(currentRouteLine);
-                currentRouteLine = null;
-            }
-        });
-    }
+    clearBtn.addEventListener('click', () => {
+        if (currentRouteLine) {
+            map.removeLayer(currentRouteLine);
+            currentRouteLine = null;
+        }
+    });
 });
 
 // --- 3. HÀM VẼ ĐƯỜNG (CORE UI LOGIC) ---
 function drawRouteOnMap(pathNodeIds) {
     if (currentRouteLine) {
-        // 👉 Dùng window.map
-        window.map.removeLayer(currentRouteLine);
+        map.removeLayer(currentRouteLine);
     }
 
     const routeCoords = [];
@@ -96,16 +90,14 @@ function drawRouteOnMap(pathNodeIds) {
     });
 
     if (routeCoords.length > 0) {
-        // 👉 Dùng window.map
         currentRouteLine = L.polyline(routeCoords, {
             color: '#f97316',    
             weight: 6,           
             dashArray: '10, 10', 
             opacity: 0.9,
             lineJoin: 'round'    
-        }).addTo(window.map);
+        }).addTo(map);
 
-        // 👉 Dùng window.map
-        window.map.fitBounds(currentRouteLine.getBounds(), { padding: [50, 50] });
+        map.fitBounds(currentRouteLine.getBounds(), { padding: [50, 50] });
     }
 }
