@@ -1,0 +1,62 @@
+[
+    {
+        "LINE_ID": "1",
+        "LINE_NAME": "สายสุขุมวิท (สายสีเขียวอ่อน);Sukhumvit (Light green Line)",
+        "COLOR": "65b724",
+        "TYPEE": "BTS"
+    },
+    {
+        "LINE_ID": "2",
+        "LINE_NAME": "สายสีลม (สายสีเขียวแก่);Silom (Dark green Line)",
+        "COLOR": "246B5B",
+        "TYPEE": "BTS"
+    },
+    {
+        "LINE_ID": "3",
+        "LINE_NAME": "สายเฉลิมรัชมงคล (สีน้ำเงิน);Blue Line",
+        "COLOR": "1964B7",
+        "TYPEE": "MRT"
+    },
+    {
+        "LINE_ID": "4",
+        "LINE_NAME": "สายฉลองรัชธรรม (สีม่วง);Purple Line",
+        "COLOR": "660066",
+        "TYPEE": "MRT"
+    },
+    {
+        "LINE_ID": "5",
+        "LINE_NAME": "รถไฟฟ้าเชื่อมต่อท่าอากาศยาน;Airport Rail Link",
+        "COLOR": "E32020",
+        "TYPEE": "ARL"
+    },
+    {
+        "LINE_ID": "2025",
+        "LINE_NAME": "สายสีทอง [สีทอง];Gold Line",
+        "COLOR": "A3862A",
+        "TYPEE": "BTS"
+    },
+    {
+        "LINE_ID": "2026",
+        "LINE_NAME": "สายสีแดงเข้ม;Dark Red Line",
+        "COLOR": "e10506",
+        "TYPEE": "SRT"
+    },
+    {
+        "LINE_ID": "2027",
+        "LINE_NAME": "สายสีแดงอ่อน;Light Red Line",
+        "COLOR": "fd5353",
+        "TYPEE": "SRT"
+    },
+    {
+        "LINE_ID": "2224",
+        "LINE_NAME": "สายลาดพร้าว–ศรีนครินทร์–สำโรง (สายสีเหลือง);Yellow Line",
+        "COLOR": "FFE547",
+        "TYPEE": "MRT"
+    },
+    {
+        "LINE_ID": "2436",
+        "LINE_NAME": "สายแคราย - มีนบุรี (สายสีชมพู);Pink Line",
+        "COLOR": "cd4692",
+        "TYPEE": "MRT"
+    }
+]

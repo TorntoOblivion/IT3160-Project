@@ -1,0 +1,226 @@
+/* =========================================
+   RESET & BASE (Ép đồng bộ Font chữ 100%)
+   ========================================= */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    /* 1. Khai báo phông chữ chuẩn cho toàn bộ trang web */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    
+    /* Mẹo của UI Designer: Làm cho nét chữ mượt và sắc nét hơn trên màn hình */
+    -webkit-font-smoothing: antialiased; 
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* 2. Lệnh Thiết Quân Luật: Ép tất cả các phần tử cứng đầu phải nghe theo font của Body */
+button, input, select, textarea {
+    font-family: inherit;
+}
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+}
+
+/* =========================================
+   HEADER - GIAO DIỆN XANH DƯƠNG HIỆN ĐẠI
+   ========================================= */
+.top-bar {
+    background-color: #1e40af; /* Màu xanh dương đậm, mượt mà */
+    color: #ffffff;
+    height: 72px; /* Chiều cao 72px để chứa 2 dòng chữ bên phải */
+    padding: 0 30px;
+    display: flex;
+    justify-content: space-between; /* Đẩy Logo sang trái, Admin sang phải */
+    align-items: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    z-index: 2000;
+    position: relative;
+}
+
+/* --- KHỐI BÊN TRÁI (LOGO & TÊN) --- */
+.brand-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.brand-info h1 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: 0.5px;
+}
+
+.logo-icon {
+    font-size: 26px;
+}
+
+/* --- KHỐI BÊN PHẢI (USER INFO & LOGOUT) --- */
+.user-actions {
+    display: flex;
+    flex-direction: column; /* Xếp các phần tử dọc từ trên xuống */
+    align-items: flex-end; /* Căn toàn bộ nội dung ép sát lề phải */
+    gap: 5px; /* Khoảng cách giữa dòng chữ Xin chào và nút Đăng xuất */
+}
+
+.admin-greeting {
+    font-size: 13px;
+    color: #bfdbfe; /* Chữ màu xanh dương nhạt cho dịu mắt */
+}
+
+.admin-greeting span {
+    color: #ffffff;
+    font-weight: bold;
+}
+
+/* --- NÚT ĐĂNG XUẤT --- */
+.btn-logout {
+    background-color: transparent;
+    color: #fca5a5;
+    border: 1px solid #fca5a5;
+    padding: 4px 16px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-logout:hover {
+    background-color: #ef4444;
+    color: #ffffff;
+    border-color: #ef4444;
+}
+
+/* =========================================
+   BỐ CỤC CHÍNH (Chia 2 cột)
+   ========================================= */
+.main-layout {
+    display: flex; 
+    height: calc(100vh - 72px); /* BẮT BUỘC: Đồng bộ với chiều cao 72px của Header */
+    width: 100%;
+    overflow: hidden; 
+}
+
+/* --- CỘT TRÁI (Sidebar) --- */
+.scenario-sidebar {
+    width: 300px;
+    min-width: 300px;
+    background: #f8f9fa;
+    border-right: 1px solid #e2e8f0;
+    padding: 24px;
+    overflow-y: auto;
+}
+
+/* --- CỘT PHẢI (Khu vực Bản đồ) --- */
+.map-area {
+    flex-grow: 1;
+    position: relative;
+}
+
+/* --- LINH HỒN CỦA BẢN ĐỒ --- */
+#map {
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+/* =========================================
+   ĐỊNH DẠNG NÚT CLEAR ALL SCENARIOS
+   ========================================= */
+#btn-clear-all {
+    width: 100%; /* Kéo dài nút tràn viền giống các nút phía trên */
+    padding: 12px 15px; /* Làm nút béo và dễ bấm hơn */
+    font-size: 16px; /* Cỡ chữ to, rõ ràng */
+    font-weight: 700; /* In đậm chữ */
+    text-align: center; /* Ép chữ nằm chính giữa nút */
+    
+    background-color: #f44336; /* Màu đỏ cảnh báo cho hành động xóa */
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    
+    /* Đẩy nút này cách xa các kịch bản phía trên ra một chút cho thoáng */
+    margin-top: 20px; 
+    display: block;
+}
+
+/* Hiệu ứng khi di chuột vào nút Clear */
+#btn-clear-all:hover {
+    background-color: #d32f2f; /* Màu đỏ sậm hơn */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15); /* Đổ bóng nhẹ cho có chiều sâu */
+}
+
+/* Class này
+
+/* =========================================
+   CĂN CHỈNH KHOẢNG TRẮNG CHO CÁC KỊCH BẢN
+   ========================================= */
+
+/* Đẩy các nhóm kịch bản (Control Group) ra xa nhau */
+.control-group {
+    margin-bottom: 25px; /* Tăng khoảng cách giữa các nhóm lên 25px */
+}
+
+/* Định dạng lại tiêu đề (Icon + Tên nhóm) cho thoáng đãng */
+.control-group h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #334155; /* Màu xám xanh đậm, thanh lịch hơn đen tuyền */
+    margin-bottom: 12px; /* Khoảng cách từ tiêu đề xuống nút bấm đầu tiên */
+    display: flex;
+    align-items: center;
+    gap: 8px; /* Tạo khoảng trống nhỏ giữa cái Icon và dòng chữ */
+    border-bottom: 2px solid #f1f5f9; /* (Tùy chọn) Thêm gạch chân mờ để phân cách rõ hơn */
+    padding-bottom: 6px;
+}
+
+/* Đảm bảo nút cuối cùng trong một nhóm không bị dư khoảng cách thừa */
+.control-group .btn-item:last-child {
+    margin-bottom: 0;
+}
+
+/* =========================================
+   NÚT BẤM KỊCH BẢN (SCENARIOS)
+   ========================================= */
+.btn-item {
+    display: block; /* BẮT BUỘC: Ép nút thành một khối độc lập để nhận width 100% */
+    width: 100%;    /* Kéo dài nút tràn viền cột Sidebar */
+    padding: 12px 15px; /* Làm nút dày dặn, dễ bấm hơn */
+    margin-bottom: 10px;
+    
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: white;
+    
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s;
+    
+    /* ĐỊNH DẠNG CHỮ */
+    font-size: 14px;
+    font-weight: 700; /* 700 chính là in đậm (bold) */
+    color: #1e293b; /* Màu chữ xám đen cho nét chữ sắc sảo, sang trọng */
+}
+
+/* Hiệu ứng khi di chuột vào nút */
+.btn-item:hover {
+    background-color: #f1f5f9;
+    border-color: #94a3b8;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* Thêm bóng đổ nhẹ cho nút có chiều sâu */
+}

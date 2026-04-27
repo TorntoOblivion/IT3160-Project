@@ -1,0 +1,11 @@
+﻿LINE_ID,LINE_NAME,COLOR,TYPEE
+1,สายสุขุมวิท (สายสีเขียวอ่อน);Sukhumvit (Light green Line),65b724,BTS
+2,สายสีลม (สายสีเขียวแก่);Silom (Dark green Line),246B5B,BTS
+3,สายเฉลิมรัชมงคล (สีน้ำเงิน);Blue Line,1964B7,MRT
+4,สายฉลองรัชธรรม (สีม่วง);Purple Line,660066,MRT
+5,รถไฟฟ้าเชื่อมต่อท่าอากาศยาน;Airport Rail Link,E32020,ARL
+2025,สายสีทอง [สีทอง];Gold Line,A3862A,BTS
+2026,สายสีแดงเข้ม;Dark Red Line,e10506,SRT
+2027,สายสีแดงอ่อน;Light Red Line,fd5353,SRT
+2224,สายลาดพร้าว–ศรีนครินทร์–สำโรง (สายสีเหลือง);Yellow Line,FFE547,MRT
+2436,สายแคราย - มีนบุรี (สายสีชมพู);Pink Line,cd4692,MRT

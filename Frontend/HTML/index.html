@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bangkok Subway AI Route Planner</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    
+    <aside class="sidebar">
+        <h2>Route Planner</h2>
+        
+        <div class="input-group">
+            <label for="start-station">Starting point (Click on map)</label>
+            <input type="text" id="start-station" placeholder="Tên điểm đi" readonly>
+        </div>
+
+        <div class="input-group">
+            <label for="end-station">Ending point (Click on map)</label>
+            <input type="text" id="end-station" placeholder="Tên điểm đến" readonly>
+        </div>
+
+        <button id="find-route-btn">Find Route</button>
+        <button id="clear-btn">Clear Route</button>
+        
+        <div class="route-info">
+            <h3>Route Info</h3>
+            <p id="route-text">Select two stations on the map to find route.</p>
+        </div>
+    </aside>
+
+    <main class="map-container">
+        <div id="map"></div> 
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script src="../js/config.js"></script>
+    <script src="../js/map.js"></script> 
+    <script src="../js/pathfinding.js"></script>
+</body>
+</html>

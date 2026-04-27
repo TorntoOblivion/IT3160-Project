@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập Quản trị - Bangkok Subway</title>
+    <link rel="stylesheet" href="../css/login.css">
+</head>
+<body>
+    <div class="login-container">
+        <form class="login-form" id="login-form">
+            <div class="login-header">
+                <h2>Admin</h2>
+                <p>Vui lòng đăng nhập để tiếp tục</p>
+            </div>
+
+            <div class="input-group">
+                <label for="username">Tên đăng nhập</label>
+                <input type="text" id="username" name="username" required placeholder="Nhập admin username">
+            </div>
+
+            <div class="input-group">
+                <label for="password">Mật khẩu</label>
+                <input type="password" id="password" name="password" required placeholder="••••••••">
+            </div>
+
+            <button type="submit" class="login-button">Đăng nhập</button>
+        </form>
+    </div>
+
+    <script src="../js/auth.js"></script>
+</body>
+</html>

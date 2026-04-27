@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Bangkok Subway System</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body class="admin-page">
+
+    <header class="top-bar">
+        <div class="brand-info">
+            <span class="logo-icon">🚇</span>
+            <h1>Bangkok Subway System</h1>
+        </div>
+        
+        <div class="user-actions">
+            <div class="admin-greeting">Xin chào, <span id="admin-name">Quản trị viên</span></div>
+            <button id="logout-btn" class="btn-logout">Đăng xuất</button>
+        </div>
+    </header>
+
+    <div class="main-layout">
+        
+        <aside class="scenario-sidebar">
+            <h2>Scenario Controls</h2>
+            
+            <div class="control-group">
+                <h3>📍 Station Management</h3>
+                <button id="btn-node-outage" class="btn-item">Node Outage (Đóng trạm)</button>
+            </div>
+
+            <div class="control-group">
+                <h3>🚫 Track Blockage</h3>
+                <button id="btn-edge-outage" class="btn-item">Add Edge Block (Chặn ray)</button>
+            </div>
+
+            <div class="control-group">
+                <h3>⏰ Traffic Scenarios</h3>
+                <button class="btn-item">Normal Rush Hour (x2)</button>
+                <button class="btn-item">Extreme Congestion (x5)</button>
+            </div>
+
+            <div class="control-group">
+                <h3>🔄 Transfer Issues</h3>
+                <div style="display: flex; flex-direction: column; gap: 5px;">
+                    <button id="btn-transfer-light" class="btn-item" style="border-left: 4px solid #f1c40f;">Light (+5 min)</button>
+                    <button id="btn-transfer-heavy" class="btn-item" style="border-left: 4px solid #e67e22;">Heavy (+15 min)</button>
+                    <button id="btn-transfer-extreme" class="btn-item" style="border-left: 4px solid #8e44ad;">Extreme (+30 min)</button>
+                </div>
+            </div>
+
+            <button id="btn-clear-all">Clear All Scenarios</button>
+            <div style="margin-top: 15px;">
+                <span id="status-msg" style="font-weight: bold;">Vui lòng chọn một tính năng.</span>
+                <button id="btn-confirm-ok" style="display: none; margin-left: 10px; background-color: #28a745; color: white; padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer;">
+                    XÁC NHẬN
+                </button>
+            </div>
+        </aside>
+
+        <main class="map-area">
+            <div id="map"></div>
+        </main>
+
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+/* Reset định dạng mặc định của trình duyệt */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Biến trang web thành một hàng ngang chứa 2 phần tử chính */
+body {
+    display: flex;
+    height: 100vh; /* Cao bằng 100% màn hình hiển thị */
+    overflow: hidden; /* Chống cuộn trang thừa */
+}
+
+/* Định dạng Sidebar bên trái */
+.sidebar {
+    width: 350px; /* Chiều rộng cố định cho sidebar */
+    background-color: #f7f9fc; /* Màu nền xám xanh nhẹ */
+    padding: 25px;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1); /* Tạo bóng đổ nhẹ để tách biệt */
+    z-index: 10; /* Đảm bảo sidebar luôn đè lên bản đồ khi di chuyển */
+    display: flex;
+    flex-direction: column;
+    gap: 20px; /* Tạo khoảng cách đều giữa các ô */
+}
+
+/* Định dạng các tiêu đề */
+h2 { color: #333; margin-bottom: 5px; font-weight: 700; }
+h3 { color: #555; font-size: 1.1em; margin-bottom: 8px; }
+
+/* Định dạng nhóm nhập liệu */
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.input-group label { font-size: 14px; color: #555; }
+
+/* Định dạng ô nhập liệu (Input) */
+.input-group input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background-color: white;
+    transition: all 0.3s;
+}
+
+/* Hiệu ứng cho ô nhập liệu chỉ đọc (readonly) để user biết là phải click map */
+.input-group input[readonly] {
+    background-color: #e9ecef;
+    cursor: not-allowed;
+    color: #495057;
+    font-weight: 500;
+}
+
+/* =========================================
+   CÁC NÚT BẤM (BUTTONS)
+   ========================================= */
+
+/* Nút Tìm đường (Xanh lá) */
+button#find-route-btn {
+    background-color: #10b981; 
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    width: 100%;
+    font-size: 15px;
+    transition: 0.2s;
+}
+
+button#find-route-btn:hover { background-color: #059669; }
+
+/* Trạng thái khi đang tải (Khóa nút để khỏi bấm 2 lần) */
+button#find-route-btn:disabled {
+    background-color: #9ca3af;
+    cursor: wait;
+}
+
+/* Nút Xóa (Đỏ) */
+button#clear-btn {
+    background-color: #f44336;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    width: 100%;
+    font-size: 15px;
+    transition: 0.2s;
+}
+
+button#clear-btn:hover { background-color: #d32f2f; }
+
+/* ========================================= */
+
+/* Đẩy khu vực Route Info xuống dưới cùng */
+.route-info { 
+    margin-top: auto; 
+    padding: 15px;
+    background: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+}
+.route-info p { color: #666; line-height: 1.5; font-size: 14px; }
+
+/* Định dạng khu vực chứa bản đồ */
+.map-container {
+    flex-grow: 1; /* Chiếm toàn bộ phần không gian còn lại bên phải */
+    position: relative;
+    background-color: #e9ecef;
+}
+
+/* Div bản đồ chính */
+#map {
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}

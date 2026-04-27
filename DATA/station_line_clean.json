@@ -1,0 +1,777 @@
+[
+    {
+        "STATION_ID": "37",
+        "LINE_ID": "1",
+        "STOP_SEQUENCE": "1"
+    },
+    {
+        "STATION_ID": "13612",
+        "LINE_ID": "1",
+        "STOP_SEQUENCE": "2"
+    },
+    {
+        "STATION_ID": "13638",
+        "LINE_ID": "1",
+        "STOP_SEQUENCE": "3"
+    },
+    {
+        "STATION_ID": "13639",
+        "LINE_ID": "1",
+        "STOP_SEQUENCE": "4"
+    },
+    {
+        "STATION_ID": "13640",
+        "LINE_ID": "1",
+        "STOP_SEQUENCE": "5"
+    },
+    {
+        "STATION_ID": "13641",
+        "LINE_ID": "1",
+        "STOP_SEQUENCE": "6"
+    },
+    {
+        "STATION_ID": "13828",
+        "LINE_ID": "1",
+        "STOP_SEQUENCE": "7"
+    },
+    {
+        "STATION_ID": "13829",
+        "LINE_ID": "1",
+        "STOP_SEQUENCE": "8"
+    },
+    {
+        "STATION_ID": "13830",
+        "LINE_ID": "1",
+        "STOP_SEQUENCE": "9"
+    },
+    {
+        "STATION_ID": "13831",
+        "LINE_ID": "1",
+        "STOP_SEQUENCE": "10"
+    },
+    {
+        "STATION_ID": "13837",
+        "LINE_ID": "1",
+        "STOP_SEQUENCE": "11"
+    },
+    {
+        "STATION_ID": "13838",
+        "LINE_ID": "1",
+        "STOP_SEQUENCE": "12"
+    },
+    {
+        "STATION_ID": "13839",
+        "LINE_ID": "1",
+        "STOP_SEQUENCE": "13"
+    },
+    {
+        "STATION_ID": "13840",
+        "LINE_ID": "1",
+        "STOP_SEQUENCE": "14"
+    },
+    {
+        "STATION_ID": "13841",
+        "LINE_ID": "1",
+        "STOP_SEQUENCE": "15"
+    },
+    {
+        "STATION_ID": "13842",
+        "LINE_ID": "1",
+        "STOP_SEQUENCE": "16"
+    },
+    {
+        "STATION_ID": "13843",
+        "LINE_ID": "1",
+        "STOP_SEQUENCE": "17"
+    },
+    {
+        "STATION_ID": "13",
+        "LINE_ID": "2",
+        "STOP_SEQUENCE": "1"
+    },
+    {
+        "STATION_ID": "12",
+        "LINE_ID": "2",
+        "STOP_SEQUENCE": "2"
+    },
+    {
+        "STATION_ID": "11",
+        "LINE_ID": "2",
+        "STOP_SEQUENCE": "3"
+    },
+    {
+        "STATION_ID": "10",
+        "LINE_ID": "2",
+        "STOP_SEQUENCE": "4"
+    },
+    {
+        "STATION_ID": "9",
+        "LINE_ID": "2",
+        "STOP_SEQUENCE": "5"
+    },
+    {
+        "STATION_ID": "13844",
+        "LINE_ID": "2",
+        "STOP_SEQUENCE": "6"
+    },
+    {
+        "STATION_ID": "8",
+        "LINE_ID": "2",
+        "STOP_SEQUENCE": "7"
+    },
+    {
+        "STATION_ID": "7",
+        "LINE_ID": "2",
+        "STOP_SEQUENCE": "8"
+    },
+    {
+        "STATION_ID": "6",
+        "LINE_ID": "2",
+        "STOP_SEQUENCE": "9"
+    },
+    {
+        "STATION_ID": "5",
+        "LINE_ID": "2",
+        "STOP_SEQUENCE": "10"
+    },
+    {
+        "STATION_ID": "4",
+        "LINE_ID": "2",
+        "STOP_SEQUENCE": "11"
+    },
+    {
+        "STATION_ID": "3",
+        "LINE_ID": "2",
+        "STOP_SEQUENCE": "12"
+    },
+    {
+        "STATION_ID": "2",
+        "LINE_ID": "2",
+        "STOP_SEQUENCE": "13"
+    },
+    {
+        "STATION_ID": "1",
+        "LINE_ID": "2",
+        "STOP_SEQUENCE": "14"
+    },
+    {
+        "STATION_ID": "13836",
+        "LINE_ID": "2025",
+        "STOP_SEQUENCE": "1"
+    },
+    {
+        "STATION_ID": "13835",
+        "LINE_ID": "2025",
+        "STOP_SEQUENCE": "2"
+    },
+    {
+        "STATION_ID": "13834",
+        "LINE_ID": "2025",
+        "STOP_SEQUENCE": "3"
+    },
+    {
+        "STATION_ID": "13846",
+        "LINE_ID": "2026",
+        "STOP_SEQUENCE": "1"
+    },
+    {
+        "STATION_ID": "5409",
+        "LINE_ID": "2026",
+        "STOP_SEQUENCE": "2"
+    },
+    {
+        "STATION_ID": "5410",
+        "LINE_ID": "2026",
+        "STOP_SEQUENCE": "3"
+    },
+    {
+        "STATION_ID": "5411",
+        "LINE_ID": "2026",
+        "STOP_SEQUENCE": "4"
+    },
+    {
+        "STATION_ID": "5412",
+        "LINE_ID": "2026",
+        "STOP_SEQUENCE": "5"
+    },
+    {
+        "STATION_ID": "5413",
+        "LINE_ID": "2026",
+        "STOP_SEQUENCE": "6"
+    },
+    {
+        "STATION_ID": "13845",
+        "LINE_ID": "2026",
+        "STOP_SEQUENCE": "7"
+    },
+    {
+        "STATION_ID": "5415",
+        "LINE_ID": "2026",
+        "STOP_SEQUENCE": "8"
+    },
+    {
+        "STATION_ID": "5416",
+        "LINE_ID": "2026",
+        "STOP_SEQUENCE": "9"
+    },
+    {
+        "STATION_ID": "5417",
+        "LINE_ID": "2026",
+        "STOP_SEQUENCE": "10"
+    },
+    {
+        "STATION_ID": "13846",
+        "LINE_ID": "2027",
+        "STOP_SEQUENCE": "1"
+    },
+    {
+        "STATION_ID": "13849",
+        "LINE_ID": "2027",
+        "STOP_SEQUENCE": "2"
+    },
+    {
+        "STATION_ID": "13848",
+        "LINE_ID": "2027",
+        "STOP_SEQUENCE": "3"
+    },
+    {
+        "STATION_ID": "13847",
+        "LINE_ID": "2027",
+        "STOP_SEQUENCE": "4"
+    },
+    {
+        "STATION_ID": "14118",
+        "LINE_ID": "2224",
+        "STOP_SEQUENCE": "1"
+    },
+    {
+        "STATION_ID": "14119",
+        "LINE_ID": "2224",
+        "STOP_SEQUENCE": "2"
+    },
+    {
+        "STATION_ID": "14393",
+        "LINE_ID": "2224",
+        "STOP_SEQUENCE": "3"
+    },
+    {
+        "STATION_ID": "14121",
+        "LINE_ID": "2224",
+        "STOP_SEQUENCE": "4"
+    },
+    {
+        "STATION_ID": "14122",
+        "LINE_ID": "2224",
+        "STOP_SEQUENCE": "5"
+    },
+    {
+        "STATION_ID": "14123",
+        "LINE_ID": "2224",
+        "STOP_SEQUENCE": "6"
+    },
+    {
+        "STATION_ID": "14124",
+        "LINE_ID": "2224",
+        "STOP_SEQUENCE": "7"
+    },
+    {
+        "STATION_ID": "14125",
+        "LINE_ID": "2224",
+        "STOP_SEQUENCE": "8"
+    },
+    {
+        "STATION_ID": "14126",
+        "LINE_ID": "2224",
+        "STOP_SEQUENCE": "9"
+    },
+    {
+        "STATION_ID": "14127",
+        "LINE_ID": "2224",
+        "STOP_SEQUENCE": "10"
+    },
+    {
+        "STATION_ID": "14128",
+        "LINE_ID": "2224",
+        "STOP_SEQUENCE": "11"
+    },
+    {
+        "STATION_ID": "14129",
+        "LINE_ID": "2224",
+        "STOP_SEQUENCE": "12"
+    },
+    {
+        "STATION_ID": "14130",
+        "LINE_ID": "2224",
+        "STOP_SEQUENCE": "13"
+    },
+    {
+        "STATION_ID": "14131",
+        "LINE_ID": "2224",
+        "STOP_SEQUENCE": "14"
+    },
+    {
+        "STATION_ID": "14132",
+        "LINE_ID": "2224",
+        "STOP_SEQUENCE": "15"
+    },
+    {
+        "STATION_ID": "14133",
+        "LINE_ID": "2224",
+        "STOP_SEQUENCE": "16"
+    },
+    {
+        "STATION_ID": "14134",
+        "LINE_ID": "2224",
+        "STOP_SEQUENCE": "17"
+    },
+    {
+        "STATION_ID": "14135",
+        "LINE_ID": "2224",
+        "STOP_SEQUENCE": "18"
+    },
+    {
+        "STATION_ID": "14136",
+        "LINE_ID": "2224",
+        "STOP_SEQUENCE": "19"
+    },
+    {
+        "STATION_ID": "14137",
+        "LINE_ID": "2224",
+        "STOP_SEQUENCE": "20"
+    },
+    {
+        "STATION_ID": "14138",
+        "LINE_ID": "2224",
+        "STOP_SEQUENCE": "21"
+    },
+    {
+        "STATION_ID": "14139",
+        "LINE_ID": "2224",
+        "STOP_SEQUENCE": "22"
+    },
+    {
+        "STATION_ID": "14117",
+        "LINE_ID": "2224",
+        "STOP_SEQUENCE": "23"
+    },
+    {
+        "STATION_ID": "359",
+        "LINE_ID": "2436",
+        "STOP_SEQUENCE": "1"
+    },
+    {
+        "STATION_ID": "14622",
+        "LINE_ID": "2436",
+        "STOP_SEQUENCE": "2"
+    },
+    {
+        "STATION_ID": "14623",
+        "LINE_ID": "2436",
+        "STOP_SEQUENCE": "3"
+    },
+    {
+        "STATION_ID": "14624",
+        "LINE_ID": "2436",
+        "STOP_SEQUENCE": "4"
+    },
+    {
+        "STATION_ID": "14625",
+        "LINE_ID": "2436",
+        "STOP_SEQUENCE": "5"
+    },
+    {
+        "STATION_ID": "14626",
+        "LINE_ID": "2436",
+        "STOP_SEQUENCE": "6"
+    },
+    {
+        "STATION_ID": "14627",
+        "LINE_ID": "2436",
+        "STOP_SEQUENCE": "7"
+    },
+    {
+        "STATION_ID": "14628",
+        "LINE_ID": "2436",
+        "STOP_SEQUENCE": "8"
+    },
+    {
+        "STATION_ID": "14629",
+        "LINE_ID": "2436",
+        "STOP_SEQUENCE": "9"
+    },
+    {
+        "STATION_ID": "14630",
+        "LINE_ID": "2436",
+        "STOP_SEQUENCE": "10"
+    },
+    {
+        "STATION_ID": "14631",
+        "LINE_ID": "2436",
+        "STOP_SEQUENCE": "11"
+    },
+    {
+        "STATION_ID": "14632",
+        "LINE_ID": "2436",
+        "STOP_SEQUENCE": "12"
+    },
+    {
+        "STATION_ID": "14633",
+        "LINE_ID": "2436",
+        "STOP_SEQUENCE": "13"
+    },
+    {
+        "STATION_ID": "14634",
+        "LINE_ID": "2436",
+        "STOP_SEQUENCE": "14"
+    },
+    {
+        "STATION_ID": "14635",
+        "LINE_ID": "2436",
+        "STOP_SEQUENCE": "15"
+    },
+    {
+        "STATION_ID": "14636",
+        "LINE_ID": "2436",
+        "STOP_SEQUENCE": "16"
+    },
+    {
+        "STATION_ID": "14637",
+        "LINE_ID": "2436",
+        "STOP_SEQUENCE": "17"
+    },
+    {
+        "STATION_ID": "14638",
+        "LINE_ID": "2436",
+        "STOP_SEQUENCE": "18"
+    },
+    {
+        "STATION_ID": "14639",
+        "LINE_ID": "2436",
+        "STOP_SEQUENCE": "19"
+    },
+    {
+        "STATION_ID": "14640",
+        "LINE_ID": "2436",
+        "STOP_SEQUENCE": "20"
+    },
+    {
+        "STATION_ID": "14641",
+        "LINE_ID": "2436",
+        "STOP_SEQUENCE": "21"
+    },
+    {
+        "STATION_ID": "14642",
+        "LINE_ID": "2436",
+        "STOP_SEQUENCE": "22"
+    },
+    {
+        "STATION_ID": "14643",
+        "LINE_ID": "2436",
+        "STOP_SEQUENCE": "23"
+    },
+    {
+        "STATION_ID": "14644",
+        "LINE_ID": "2436",
+        "STOP_SEQUENCE": "24"
+    },
+    {
+        "STATION_ID": "14645",
+        "LINE_ID": "2436",
+        "STOP_SEQUENCE": "25"
+    },
+    {
+        "STATION_ID": "14646",
+        "LINE_ID": "2436",
+        "STOP_SEQUENCE": "26"
+    },
+    {
+        "STATION_ID": "14647",
+        "LINE_ID": "2436",
+        "STOP_SEQUENCE": "27"
+    },
+    {
+        "STATION_ID": "14648",
+        "LINE_ID": "2436",
+        "STOP_SEQUENCE": "28"
+    },
+    {
+        "STATION_ID": "14649",
+        "LINE_ID": "2436",
+        "STOP_SEQUENCE": "29"
+    },
+    {
+        "STATION_ID": "14650",
+        "LINE_ID": "2436",
+        "STOP_SEQUENCE": "30"
+    },
+    {
+        "STATION_ID": "331",
+        "LINE_ID": "3",
+        "STOP_SEQUENCE": "1"
+    },
+    {
+        "STATION_ID": "334",
+        "LINE_ID": "3",
+        "STOP_SEQUENCE": "2"
+    },
+    {
+        "STATION_ID": "346",
+        "LINE_ID": "3",
+        "STOP_SEQUENCE": "3"
+    },
+    {
+        "STATION_ID": "352",
+        "LINE_ID": "3",
+        "STOP_SEQUENCE": "4"
+    },
+    {
+        "STATION_ID": "339",
+        "LINE_ID": "3",
+        "STOP_SEQUENCE": "5"
+    },
+    {
+        "STATION_ID": "340",
+        "LINE_ID": "3",
+        "STOP_SEQUENCE": "6"
+    },
+    {
+        "STATION_ID": "351",
+        "LINE_ID": "3",
+        "STOP_SEQUENCE": "7"
+    },
+    {
+        "STATION_ID": "342",
+        "LINE_ID": "3",
+        "STOP_SEQUENCE": "8"
+    },
+    {
+        "STATION_ID": "344",
+        "LINE_ID": "3",
+        "STOP_SEQUENCE": "9"
+    },
+    {
+        "STATION_ID": "360",
+        "LINE_ID": "3",
+        "STOP_SEQUENCE": "10"
+    },
+    {
+        "STATION_ID": "350",
+        "LINE_ID": "3",
+        "STOP_SEQUENCE": "11"
+    },
+    {
+        "STATION_ID": "345",
+        "LINE_ID": "3",
+        "STOP_SEQUENCE": "12"
+    },
+    {
+        "STATION_ID": "341",
+        "LINE_ID": "3",
+        "STOP_SEQUENCE": "13"
+    },
+    {
+        "STATION_ID": "361",
+        "LINE_ID": "3",
+        "STOP_SEQUENCE": "14"
+    },
+    {
+        "STATION_ID": "333",
+        "LINE_ID": "3",
+        "STOP_SEQUENCE": "15"
+    },
+    {
+        "STATION_ID": "336",
+        "LINE_ID": "3",
+        "STOP_SEQUENCE": "16"
+    },
+    {
+        "STATION_ID": "329",
+        "LINE_ID": "3",
+        "STOP_SEQUENCE": "17"
+    },
+    {
+        "STATION_ID": "337",
+        "LINE_ID": "3",
+        "STOP_SEQUENCE": "18"
+    },
+    {
+        "STATION_ID": "343",
+        "LINE_ID": "3",
+        "STOP_SEQUENCE": "19"
+    },
+    {
+        "STATION_ID": "13624",
+        "LINE_ID": "3",
+        "STOP_SEQUENCE": "20"
+    },
+    {
+        "STATION_ID": "13625",
+        "LINE_ID": "3",
+        "STOP_SEQUENCE": "21"
+    },
+    {
+        "STATION_ID": "13626",
+        "LINE_ID": "3",
+        "STOP_SEQUENCE": "22"
+    },
+    {
+        "STATION_ID": "13627",
+        "LINE_ID": "3",
+        "STOP_SEQUENCE": "23"
+    },
+    {
+        "STATION_ID": "13628",
+        "LINE_ID": "3",
+        "STOP_SEQUENCE": "24"
+    },
+    {
+        "STATION_ID": "13632",
+        "LINE_ID": "3",
+        "STOP_SEQUENCE": "25"
+    },
+    {
+        "STATION_ID": "13633",
+        "LINE_ID": "3",
+        "STOP_SEQUENCE": "26"
+    },
+    {
+        "STATION_ID": "13634",
+        "LINE_ID": "3",
+        "STOP_SEQUENCE": "27"
+    },
+    {
+        "STATION_ID": "13635",
+        "LINE_ID": "3",
+        "STOP_SEQUENCE": "28"
+    },
+    {
+        "STATION_ID": "13636",
+        "LINE_ID": "3",
+        "STOP_SEQUENCE": "29"
+    },
+    {
+        "STATION_ID": "13637",
+        "LINE_ID": "3",
+        "STOP_SEQUENCE": "30"
+    },
+    {
+        "STATION_ID": "331",
+        "LINE_ID": "4",
+        "STOP_SEQUENCE": "1"
+    },
+    {
+        "STATION_ID": "335",
+        "LINE_ID": "4",
+        "STOP_SEQUENCE": "2"
+    },
+    {
+        "STATION_ID": "347",
+        "LINE_ID": "4",
+        "STOP_SEQUENCE": "3"
+    },
+    {
+        "STATION_ID": "354",
+        "LINE_ID": "4",
+        "STOP_SEQUENCE": "4"
+    },
+    {
+        "STATION_ID": "356",
+        "LINE_ID": "4",
+        "STOP_SEQUENCE": "5"
+    },
+    {
+        "STATION_ID": "359",
+        "LINE_ID": "4",
+        "STOP_SEQUENCE": "6"
+    },
+    {
+        "STATION_ID": "338",
+        "LINE_ID": "4",
+        "STOP_SEQUENCE": "7"
+    },
+    {
+        "STATION_ID": "362",
+        "LINE_ID": "4",
+        "STOP_SEQUENCE": "8"
+    },
+    {
+        "STATION_ID": "358",
+        "LINE_ID": "4",
+        "STOP_SEQUENCE": "9"
+    },
+    {
+        "STATION_ID": "332",
+        "LINE_ID": "4",
+        "STOP_SEQUENCE": "10"
+    },
+    {
+        "STATION_ID": "357",
+        "LINE_ID": "4",
+        "STOP_SEQUENCE": "11"
+    },
+    {
+        "STATION_ID": "349",
+        "LINE_ID": "4",
+        "STOP_SEQUENCE": "12"
+    },
+    {
+        "STATION_ID": "330",
+        "LINE_ID": "4",
+        "STOP_SEQUENCE": "13"
+    },
+    {
+        "STATION_ID": "355",
+        "LINE_ID": "4",
+        "STOP_SEQUENCE": "14"
+    },
+    {
+        "STATION_ID": "353",
+        "LINE_ID": "4",
+        "STOP_SEQUENCE": "15"
+    },
+    {
+        "STATION_ID": "348",
+        "LINE_ID": "4",
+        "STOP_SEQUENCE": "16"
+    },
+    {
+        "STATION_ID": "321",
+        "LINE_ID": "5",
+        "STOP_SEQUENCE": "1"
+    },
+    {
+        "STATION_ID": "327",
+        "LINE_ID": "5",
+        "STOP_SEQUENCE": "2"
+    },
+    {
+        "STATION_ID": "324",
+        "LINE_ID": "5",
+        "STOP_SEQUENCE": "3"
+    },
+    {
+        "STATION_ID": "328",
+        "LINE_ID": "5",
+        "STOP_SEQUENCE": "4"
+    },
+    {
+        "STATION_ID": "325",
+        "LINE_ID": "5",
+        "STOP_SEQUENCE": "5"
+    },
+    {
+        "STATION_ID": "323",
+        "LINE_ID": "5",
+        "STOP_SEQUENCE": "6"
+    },
+    {
+        "STATION_ID": "322",
+        "LINE_ID": "5",
+        "STOP_SEQUENCE": "7"
+    },
+    {
+        "STATION_ID": "326",
+        "LINE_ID": "5",
+        "STOP_SEQUENCE": "8"
+    }
+]
