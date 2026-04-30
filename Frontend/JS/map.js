@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // SỬA LỖI: Gán map vào window để biến này trở thành toàn cục (global)
+    // 1. KHỞI TẠO BẢN ĐỒ
     window.map = L.map('map').setView([13.7563, 100.5018], 12);
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
@@ -10,18 +10,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setTimeout(() => { window.map.invalidateSize(); }, 100);
 
-    window.startStation = null;
-    window.endStation = null;
-    window.startMarker = null;
-    window.endMarker = null;
+    // --- CÁC BIẾN QUẢN LÝ TÌM ĐƯỜNG & ĐỒNG BỘ ---
+    window.startData = null; 
+    window.endData = null;   
+    let clickMarkers = []; 
     window.globalStops = []; 
+    window.activeScenarios = { NODE_OUTAGE: [], EDGE_OUTAGE: [], TRANSFER_ISSUE: {} };
+    
+    // Lưu trữ các layer để cập nhật Real-time
+    window.nodeLayers = {}; 
+    window.edgeLayers = {}; 
 
+    // 2. TẢI DỮ LIỆU ĐỒNG THỜI
     Promise.all([
         fetch('../Data/stops_raw.json').then(res => res.json()),
         fetch('../Data/lines_clean.json').then(res => res.json()),
-        fetch('../Data/station_line_clean.json').then(res => res.json())
-    ]).then(([stopsData, linesData, sequenceData]) => {
+        fetch('../Data/station_line_clean.json').then(res => res.json()),
+        fetch('http://127.0.0.1:5000/api/scenarios').then(res => res.json()).catch(() => ({ NODE_OUTAGE: [], EDGE_OUTAGE: [], TRANSFER_ISSUE: {} }))
+    ]).then(([stopsData, linesData, sequenceData, scenariosData]) => {
         
+        window.activeScenarios = scenariosData || { NODE_OUTAGE: [], EDGE_OUTAGE: [], TRANSFER_ISSUE: {} };
+
         function getVal(obj, possibleNames) {
             if (!obj) return null;
             const keys = Object.keys(obj);
@@ -36,26 +45,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const arrLines = Array.isArray(linesData) ? linesData : Object.values(linesData)[0];
         const arrSeq = Array.isArray(sequenceData) ? sequenceData : Object.values(sequenceData)[0];
 
-        const validLines = arrLines.filter(line => {
-            const type = String(getVal(line, ["TYPEE", "TYPE"]) || "").trim().toUpperCase();
-            return ["MRT"].includes(type);
-        });
+        // Lọc lấy MRT
+        const validLines = arrLines.filter(line => ["MRT"].includes(String(getVal(line, ["TYPEE", "TYPE"]) || "").trim().toUpperCase()));
         const validLineIds = validLines.map(line => String(getVal(line, ["LINE_ID", "ID"])).trim()); 
-
-        const validSequences = arrSeq.filter(seq => {
-            const seqLineId = String(getVal(seq, ["LINE_ID", "LINE"])).trim();
-            return validLineIds.includes(seqLineId);
-        });
+        const validSequences = arrSeq.filter(seq => validLineIds.includes(String(getVal(seq, ["LINE_ID", "LINE"])).trim()));
         const validStationIds = validSequences.map(seq => String(getVal(seq, ["STATION_ID", "STATION"])).trim());
-
-        const validStops = arrStops.filter(stop => {
-            const stopId = String(getVal(stop, ["stop_id", "ID"])).trim();
-            return validStationIds.includes(stopId);
-        });
+        const validStops = arrStops.filter(stop => validStationIds.includes(String(getVal(stop, ["stop_id", "ID"])).trim()));
         
-        window.globalStops = validStops;
+        window.globalStops = validStops; 
 
-        // VẼ TUYẾN CÁP
+        // --- 3. VẼ TUYẾN CÁP MRT (LƯU VÀO EDGELAYERS) ---
         const linesGroup = {};
         validSequences.forEach(item => {
             const lId = String(getVal(item, ["LINE_ID", "LINE"])).trim();
@@ -64,76 +63,167 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         for (const lineId in linesGroup) {
-            const sortedStations = linesGroup[lineId].sort((a, b) => {
-                return Number(getVal(a, ["STOP_SEQUENCE", "SEQUENCE"])) - Number(getVal(b, ["STOP_SEQUENCE", "SEQUENCE"]));
-            });
-            
+            const sortedStations = linesGroup[lineId].sort((a, b) => Number(getVal(a, ["STOP_SEQUENCE", "SEQUENCE"])) - Number(getVal(b, ["STOP_SEQUENCE", "SEQUENCE"])));
             const lineInfo = validLines.find(l => String(getVal(l, ["LINE_ID", "ID"])).trim() === lineId);
-            const colorValue = getVal(lineInfo, ["COLOR"]);
-            const lineColor = colorValue ? `#${colorValue}` : '#333333';
+            const lineColor = getVal(lineInfo, ["COLOR"]) ? `#${getVal(lineInfo, ["COLOR"])}` : '#333333';
 
-            const pathCoords = [];
-            sortedStations.forEach(seq => {
-                const stId = String(getVal(seq, ["STATION_ID", "STATION"])).trim();
-                const station = validStops.find(s => String(getVal(s, ["stop_id", "ID"])).trim() === stId);
-                if (station) {
-                    const lat = parseFloat(getVal(station, ["stop_lat", "LAT"]));
-                    const lon = parseFloat(getVal(station, ["stop_lon", "LON"]));
-                    if (lat && lon) pathCoords.push([lat, lon]);
+            for (let i = 0; i < sortedStations.length - 1; i++) {
+                const stIdA = String(getVal(sortedStations[i], ["STATION_ID", "STATION"])).trim();
+                const stIdB = String(getVal(sortedStations[i+1], ["STATION_ID", "STATION"])).trim();
+                const stA = validStops.find(s => String(getVal(s, ["stop_id", "ID"])).trim() === stIdA);
+                const stB = validStops.find(s => String(getVal(s, ["stop_id", "ID"])).trim() === stIdB);
+
+                if (stA && stB) {
+                    const latA = parseFloat(getVal(stA, ["stop_lat", "LAT"]));
+                    const lonA = parseFloat(getVal(stA, ["stop_lon", "LON"]));
+                    const latB = parseFloat(getVal(stB, ["stop_lat", "LAT"]));
+                    const lonB = parseFloat(getVal(stB, ["stop_lon", "LON"]));
+
+                    if (latA && lonA && latB && lonB) {
+                        const edgeId1 = `${lineId}_${stIdA}_${stIdB}`;
+                        const edgeId2 = `${lineId}_${stIdB}_${stIdA}`;
+                        
+                        const polyline = L.polyline([[latA, lonA], [latB, lonB]], { 
+                            color: lineColor, weight: 5, opacity: 0.8 
+                        }).addTo(window.map);
+
+                        // Lưu lại để hàm update sau này gọi
+                        window.edgeLayers[edgeId1] = { layer: polyline, color: lineColor };
+                    }
                 }
-            });
-
-            if (pathCoords.length > 0) {
-                L.polyline(pathCoords, { color: lineColor, weight: 5, opacity: 0.8 }).addTo(window.map);
             }
         }
 
-        // VẼ TRẠM TÀU
+        // --- 4. VẼ CÁC TRẠM MRT (LƯU VÀO NODELAYERS) ---
         validStops.forEach(station => {
             const lat = parseFloat(getVal(station, ["stop_lat", "LAT"]));
             const lon = parseFloat(getVal(station, ["stop_lon", "LON"]));
             const stationName = getVal(station, ["stop_name", "NAME"]);
+            const stId = String(getVal(station, ["stop_id", "ID"])).trim();
 
             if (lat && lon) {
                 const marker = L.circleMarker([lat, lon], {
-                    radius: 4, fillColor: "#ffffff", color: "#000000", weight: 2, fillOpacity: 1
-                }).addTo(window.map);
+                    radius: 4, fillColor: "#ffffff", color: "#000", weight: 2, fillOpacity: 1
+                }).bindTooltip(`<b>${stationName}</b>`).addTo(window.map);
+                
+                // Lưu lại để hàm update sau này gọi
+                window.nodeLayers[stId] = { layer: marker, name: stationName };
+            }
+        });
 
-                marker.bindTooltip(`<b>${stationName}</b>`);
+        // Kích hoạt đồng bộ giao diện ngay sau khi vẽ xong
+        syncUI();
 
-                marker.on('click', function() {
-                    if (window.startStation && window.endStation) {
-                        alert("Đã đủ 2 điểm. Bấm Clear Route bên trái để chọn lại!");
-                        return;
-                    }
-                    if (!window.startStation) {
-                        window.startStation = station;
-                        window.startMarker = marker; 
-                        marker.setStyle({ fillColor: "#10b981", radius: 8, color: "#047857", weight: 3 }); 
-                        document.getElementById('start-station').value = stationName;
-                        document.getElementById('route-text').innerText = "Đã chọn điểm đi. Hãy chọn điểm đến.";
-                    } 
-                    else if (!window.endStation && station !== window.startStation) {
-                        window.endStation = station;
-                        window.endMarker = marker;
-                        marker.setStyle({ fillColor: "#ef4444", radius: 8, color: "#b91c1c", weight: 3 }); 
-                        document.getElementById('end-station').value = stationName;
-                        document.getElementById('route-text').innerText = "Sẵn sàng! Hãy bấm nút Find Route.";
-                    }
-                });
+        // --- 5. LOGIC CLICK TỰ DO TRÊN BẢN ĐỒ ---
+        function getNearestRawStop(clickedLatLng) {
+            let nearestStop = null;
+            let minDistance = Infinity;
+            arrStops.forEach(stop => {
+                const lat = parseFloat(getVal(stop, ["stop_lat", "LAT"]));
+                const lon = parseFloat(getVal(stop, ["stop_lon", "LON"]));
+                if (lat && lon) {
+                    const distance = window.map.distance(clickedLatLng, L.latLng(lat, lon));
+                    if (distance < minDistance) { minDistance = distance; nearestStop = stop; }
+                }
+            });
+            return nearestStop;
+        }
+
+        window.map.on('click', function(e) {
+            if (window.startData && window.endData) {
+                alert("Đã đủ 2 điểm. Bấm Clear Route bên trái để chọn lại!");
+                return;
+            }
+
+            const nearestStop = getNearestRawStop(e.latlng);
+            if (!nearestStop) return;
+
+            const stopId = String(getVal(nearestStop, ["stop_id", "ID"])).trim();
+            const stopName = getVal(nearestStop, ["stop_name", "NAME"]);
+            
+            if (window.activeScenarios.NODE_OUTAGE && window.activeScenarios.NODE_OUTAGE.includes(stopId)) {
+                alert(`⚠️ Điểm dừng "${stopName}" hiện đang đóng cửa bảo trì. Vui lòng click chọn một khu vực khác!`);
+                return;
+            }
+
+            const stopLat = parseFloat(getVal(nearestStop, ["stop_lat", "LAT"]));
+            const stopLon = parseFloat(getVal(nearestStop, ["stop_lon", "LON"]));
+
+            if (!window.startData) {
+                window.startData = nearestStop;
+                const startPin = L.circleMarker([stopLat, stopLon], { radius: 6, fillColor: "#10b981", color: "#047857", weight: 2, fillOpacity: 1 }).bindTooltip(`<b>Bắt đầu: ${stopName}</b>`, { permanent: true, direction: 'right' }).addTo(window.map);
+                clickMarkers.push(startPin);
+                document.getElementById('start-station').value = stopName;
+                document.getElementById('route-text').innerText = "Đã chọn điểm đi. Hãy click để chọn điểm đến.";
+            } else if (!window.endData) {
+                if (stopId === String(getVal(window.startData, ["stop_id", "ID"])).trim()) return alert("Điểm đến không được trùng với điểm đi!");
+                window.endData = nearestStop;
+                const endPin = L.circleMarker([stopLat, stopLon], { radius: 6, fillColor: "#ef4444", color: "#b91c1c", weight: 2, fillOpacity: 1 }).bindTooltip(`<b>Kết thúc: ${stopName}</b>`, { permanent: true, direction: 'right' }).addTo(window.map);
+                clickMarkers.push(endPin);
+                document.getElementById('end-station').value = stopName;
+                document.getElementById('route-text').innerText = "Sẵn sàng! Hãy bấm nút Find Route.";
             }
         });
     });
 
+    // --- 6. LOGIC ĐỒNG BỘ HÓA REAL-TIME (POLLING) ---
+    function syncUI() {
+        fetch('http://127.0.0.1:5000/api/scenarios')
+            .then(res => res.json())
+            .then(scenarios => {
+                window.activeScenarios = scenarios || { NODE_OUTAGE: [], EDGE_OUTAGE: [], TRANSFER_ISSUE: {} };
+
+                // 6.1. Cập nhật Trạm (Nodes)
+                for (const stId in window.nodeLayers) {
+                    const { layer, name } = window.nodeLayers[stId];
+                    const isClosed = window.activeScenarios.NODE_OUTAGE.includes(stId);
+                    const transferSeverity = window.activeScenarios.TRANSFER_ISSUE ? window.activeScenarios.TRANSFER_ISSUE[stId] : null;
+
+                    if (isClosed) {
+                        layer.setStyle({ fillColor: "#333333", color: "#ff0000", radius: 6 });
+                        layer.setTooltipContent(`<b>⚠️ ĐÓNG CỬA: ${name}</b>`);
+                    } else if (transferSeverity) {
+                        let tColor = '#f1c40f'; let tRadius = 6; let delayText = '+5 phút';
+                        if (transferSeverity === 'heavy') { tColor = '#e67e22'; tRadius = 7; delayText = '+15 phút'; } 
+                        else if (transferSeverity === 'extreme') { tColor = '#8e44ad'; tRadius = 8; delayText = '+30 phút'; }
+                        layer.setStyle({ fillColor: tColor, color: "#000", radius: tRadius });
+                        layer.setTooltipContent(`<b>⚠️ ÙN TẮC (${delayText}): ${name}</b>`);
+                    } else {
+                        layer.setStyle({ fillColor: "#ffffff", color: "#000", radius: 4 });
+                        layer.setTooltipContent(`<b>${name}</b>`);
+                    }
+                }
+
+                // 6.2. Cập nhật Tuyến (Edges)
+                for (const edgeId in window.edgeLayers) {
+                    const { layer, color } = window.edgeLayers[edgeId];
+                    const parts = edgeId.split('_');
+                    const reverseEdgeId = `${parts[0]}_${parts[2]}_${parts[1]}`; // Đảo chiều 2 trạm
+                    
+                    const isBlocked = window.activeScenarios.EDGE_OUTAGE.includes(edgeId) || window.activeScenarios.EDGE_OUTAGE.includes(reverseEdgeId);
+
+                    if (isBlocked) {
+                        layer.setStyle({ color: "#ff0000", weight: 6, dashArray: '10, 10' });
+                        layer.bindTooltip(`<b>⚠️ ĐOẠN RAY BỊ CHẶN</b>`);
+                    } else {
+                        layer.setStyle({ color: color, weight: 5, dashArray: null });
+                        layer.unbindTooltip();
+                    }
+                }
+            }).catch(err => console.log("Đang chờ Backend kết nối..."));
+    }
+
+    // Tự động gọi hàm syncUI mỗi 3 giây
+    setInterval(syncUI, 3000);
+
+    // --- 7. LOGIC NÚT CLEAR BẢN ĐỒ USER ---
     document.getElementById('clear-btn').addEventListener('click', () => {
-        if (window.startMarker) window.startMarker.setStyle({ fillColor: "#ffffff", radius: 4, color: "#000000", weight: 2 });
-        if (window.endMarker) window.endMarker.setStyle({ fillColor: "#ffffff", radius: 4, color: "#000000", weight: 2 });
-        window.startStation = null;
-        window.endStation = null;
-        window.startMarker = null;
-        window.endMarker = null;
+        clickMarkers.forEach(m => window.map.removeLayer(m));
+        clickMarkers = [];
+        window.startData = null; window.endData = null;
         document.getElementById('start-station').value = "";
         document.getElementById('end-station').value = "";
         document.getElementById('route-text').innerText = "Select two stations on the map to find route.";
+        if (window.currentRouteLine) { window.map.removeLayer(window.currentRouteLine); window.currentRouteLine = null; }
     });
 });
