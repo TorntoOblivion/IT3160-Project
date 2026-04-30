@@ -20,36 +20,87 @@ let transferIssues = {};
 const btnOk = document.getElementById('btn-confirm-ok');
 const statusMsg = document.getElementById('status-msg');
 
-// 2. LOGIC NÚT BẤM SIDEBAR
+// 2. LOGIC NÚT BẤM SIDEBAR VÀ HIỆU ỨNG GIAO DIỆN
+
+// Khai báo danh sách ID của tất cả các nút kịch bản
+const allScenarioBtns = [
+    'btn-node-outage', 'btn-edge-outage', 
+    'btn-transfer-light', 'btn-transfer-heavy', 'btn-transfer-extreme'
+];
+
+// Hàm làm nổi bật nút đang được chọn, reset các nút khác
+function highlightButton(activeId, borderColor, bgColor) {
+    // Bước 1: Trả tất cả các nút về trạng thái bình thường
+    allScenarioBtns.forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) {
+            btn.style.border = "1px solid #dee2e6"; // Viền xám nhạt mặc định
+            btn.style.backgroundColor = "#ffffff";  // Nền trắng
+            btn.style.transform = "scale(1)";       // Kích thước chuẩn
+            btn.style.boxShadow = "none";
+            btn.style.fontWeight = "normal";
+        }
+    });
+
+    // Bước 2: Nhấn mạnh nút đang được click
+    if (activeId) {
+        const activeBtn = document.getElementById(activeId);
+        if (activeBtn) {
+            activeBtn.style.border = `2px solid ${borderColor}`; // Đổi màu viền
+            activeBtn.style.backgroundColor = bgColor;           // Đổi màu nền
+            activeBtn.style.transform = "scale(1.02)";           // Phóng to nhẹ 2%
+            activeBtn.style.boxShadow = "0 4px 6px rgba(0,0,0,0.1)"; // Đổ bóng
+            activeBtn.style.fontWeight = "bold";                 // In đậm chữ
+        }
+    }
+}
+
 document.getElementById('btn-node-outage').onclick = () => {
     currentMode = 'NODE';
     statusMsg.innerText = "Chế độ ĐÓNG TRẠM: Click vào các trạm (chấm tròn) trên bản đồ.";
     statusMsg.style.color = "blue";
     btnOk.style.display = blockedNodes.length > 0 ? 'inline-block' : 'none';
+    
+    // Đổi màu nút Node: Viền xanh, nền xanh nhạt
+    highlightButton('btn-node-outage', 'blue', '#e6f2ff'); 
 };
 
 document.getElementById('btn-edge-outage').onclick = () => {
     currentMode = 'EDGE';
     statusMsg.innerText = "Chế độ CHẶN RAY: Click vào đường nối giữa 2 trạm.";
-    statusMsg.style.color = "#d35400"; // Màu cam đậm
+    statusMsg.style.color = "#d35400"; 
     btnOk.style.display = blockedEdges.length > 0 ? 'inline-block' : 'none';
+    
+    // Đổi màu nút Edge: Viền cam đậm, nền cam nhạt
+    highlightButton('btn-edge-outage', '#d35400', '#fdebd0');
 };
 
-// Gộp chung logic hiển thị cho Transfer
-function setTransferMode(severity, color, text) {
+// Cập nhật hàm setTransferMode để nhận thêm thông số ID nút bấm và Màu nền
+function setTransferMode(severity, color, bgColor, text, btnId) {
     currentMode = 'TRANSFER';
     currentSeverity = severity;
     statusMsg.innerText = `Chế độ LỖI ${text}: Click trạm để áp dụng.`;
     statusMsg.style.color = color;
     btnOk.style.display = Object.keys(transferIssues).length > 0 ? 'inline-block' : 'none';
+    
+    // Highlight nút vừa bấm
+    highlightButton(btnId, color, bgColor);
 }
 
-document.getElementById('btn-transfer-light').onclick = () => setTransferMode('light', '#f1c40f', 'NHẸ (Vàng)');
-document.getElementById('btn-transfer-heavy').onclick = () => setTransferMode('heavy', '#e67e22', 'NẶNG (Cam)');
-document.getElementById('btn-transfer-extreme').onclick = () => setTransferMode('extreme', '#8e44ad', 'NGHIÊM TRỌNG (Tím)');
+document.getElementById('btn-transfer-light').onclick = () => setTransferMode('light', '#f1c40f', '#fcf3cf', 'NHẸ (Vàng)', 'btn-transfer-light');
+document.getElementById('btn-transfer-heavy').onclick = () => setTransferMode('heavy', '#e67e22', '#fae5d3', 'NẶNG (Cam)', 'btn-transfer-heavy');
+document.getElementById('btn-transfer-extreme').onclick = () => setTransferMode('extreme', '#8e44ad', '#f4ecf7', 'NGHIÊM TRỌNG (Tím)', 'btn-transfer-extreme');
 
 document.getElementById('btn-clear-all').onclick = () => {
-    location.reload(); 
+    if (confirm("Bạn có chắc chắn muốn xóa toàn bộ kịch bản và mở lại toàn bộ hệ thống?")) {
+        fetch('http://127.0.0.1:5000/api/scenarios/clear', { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                alert("Hệ thống đã được khôi phục trạng thái bình thường!");
+                location.reload(); 
+            })
+            .catch(err => console.error("Lỗi khi xóa kịch bản:", err));
+    }
 };
 
 
@@ -224,43 +275,51 @@ Promise.all([
     });
 
     // === BƯỚC 4: XỬ LÝ SỰ KIỆN NÚT OK ===
+    // === BƯỚC 4: XỬ LÝ SỰ KIỆN NÚT OK ===
     btnOk.onclick = async () => {
+        // Hàm gửi API chung cho gọn code
+        const sendScenario = (payload, successText) => {
+            fetch('http://127.0.0.1:5000/api/scenarios/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                statusMsg.innerText = `✅ ${successText}`;
+                statusMsg.style.color = "green";
+                currentMode = null; 
+                btnOk.style.display = 'none';
+            })
+            .catch(err => {
+                statusMsg.innerText = "❌ Lỗi kết nối: Backend Python chưa bật!";
+                statusMsg.style.color = "red";
+                console.error("Lỗi đồng bộ:", err);
+            });
+        };
+
         if (currentMode === 'NODE') {
-            const confirmMsg = `Xác nhận tạo kịch bản đóng ${blockedNodes.length} trạm?\n\nID các trạm: ${blockedNodes.join(", ")}`;
-            if (confirm(confirmMsg)) {
-                console.log("Dữ liệu gửi đi Backend:", { type: 'NODE_OUTAGE', affected_nodes: blockedNodes });
-                statusMsg.innerText = "✅ Đã lưu kịch bản ĐÓNG TRẠM thành công!";
-                statusMsg.style.color = "green";
-                currentMode = null; 
-                btnOk.style.display = 'none';
+            if (confirm(`Xác nhận ĐÓNG ${blockedNodes.length} trạm?`)) {
+                sendScenario(
+                    { type: 'NODE_OUTAGE', affected_nodes: blockedNodes }, 
+                    "Đã đồng bộ kịch bản ĐÓNG TRẠM lên Server!"
+                );
             }
-        } 
+        }
         else if (currentMode === 'EDGE') {
-            const confirmMsg = `Xác nhận tạo kịch bản chặn ${blockedEdges.length} đoạn ray?\n\nID các đoạn: \n${blockedEdges.join("\n")}`;
-            if (confirm(confirmMsg)) {
-                console.log("Dữ liệu gửi đi Backend:", { type: 'EDGE_OUTAGE', affected_edges: blockedEdges });
-                statusMsg.innerText = "✅ Đã lưu kịch bản CHẶN RAY thành công!";
-                statusMsg.style.color = "green";
-                currentMode = null; 
-                btnOk.style.display = 'none';
+            if (confirm(`Xác nhận tạo kịch bản chặn ${blockedEdges.length} đoạn ray?`)) {
+                sendScenario(
+                    { type: 'EDGE_OUTAGE', affected_edges: blockedEdges }, 
+                    "Đã đồng bộ kịch bản CHẶN RAY lên Server!"
+                );
             }
         }
         else if (currentMode === 'TRANSFER') {
-            const count = Object.keys(transferIssues).length;
-            const confirmMsg = `Xác nhận tạo kịch bản Lỗi đổi tuyến cho ${count} trạm?`;
-            
-            if (confirm(confirmMsg)) {
-                // Backend của bạn sẽ nhận được 1 Object hoàn hảo như sau: 
-                // { "trạm_1": "light", "trạm_2": "extreme" }
-                console.log("Dữ liệu gửi đi Backend:", { 
-                    type: 'TRANSFER_ISSUE', 
-                    affected_nodes: transferIssues 
-                });
-                
-                statusMsg.innerText = "✅ Đã lưu kịch bản LỖI ĐỔI TUYẾN thành công!";
-                statusMsg.style.color = "green";
-                currentMode = null; 
-                btnOk.style.display = 'none';
+            if (confirm(`Xác nhận tạo kịch bản Lỗi đổi tuyến cho ${Object.keys(transferIssues).length} trạm?`)) {
+                sendScenario(
+                    { type: 'TRANSFER_ISSUE', affected_nodes: transferIssues }, 
+                    "Đã đồng bộ kịch bản LỖI ĐỔI TUYẾN lên Server!"
+                );
             }
         }
     };
