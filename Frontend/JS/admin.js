@@ -1,11 +1,25 @@
-// 1. KHỞI TẠO BẢN ĐỒ
-var map = L.map('map').setView([13.7563, 100.5018], 12);
+// 1. KHỞI TẠO BẢN ĐỒ (Đã thêm giới hạn Bangkok)
+const bangkokBounds = L.latLngBounds(
+    [13.3000, 100.1000], // Góc dưới cùng bên trái (Tây Nam)
+    [14.3000, 101.0000]  // Góc trên cùng bên phải (Đông Bắc)
+);
+
+var map = L.map('map', {
+    center: [13.7563, 100.5018], // Trọng tâm Bangkok
+    zoom: 12,                    // Mức zoom mặc định
+    minZoom: 10,                 // Không cho phép zoom out quá nhỏ ra ngoài Bangkok
+    maxBounds: bangkokBounds,    // Giăng bức tường ảo
+    maxBoundsViscosity: 1.0      // Độ cứng của bức tường
+});
 
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
     subdomains: 'abcd',
     maxZoom: 20
 }).addTo(map);
+
+// Mẹo chống lỗi hiển thị với Flexbox khi load trang
+setTimeout(() => { map.invalidateSize(); }, 100);
 
 // Biến quản lý trạng thái Admin
 let currentMode = null; 
