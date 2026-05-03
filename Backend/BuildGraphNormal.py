@@ -189,6 +189,9 @@ def build_graph_normal(data_dir):
 
 
 if __name__ == "__main__":
-    build_graph_normal(
-        data_dir=r"C:\project_intro_AI\Project-Intro-to-AI\Frontend\Data"
-    )
+    
+    BASE_DIR = Path(__file__).resolve().parent.parent
+    
+    DATA_PATH = BASE_DIR / "DATA"
+    
+    build_graph_normal(data_dir=str(DATA_PATH))
