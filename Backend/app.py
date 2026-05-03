@@ -15,7 +15,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import networkx as nx
 
-from Build_graph import load_graph  # chỉ import load, không import build
+from BuildGraphNormal import load_graph  # chỉ import load, không import build
 from A_star import astar_route        # đảm bảo astar.py nằm cùng thư mục
 
 # ----------------------------------------------------------------------
