@@ -1,17 +1,21 @@
 import json
 import networkx as nx
 import os
+import pickle
+from pathlib import Path
 
+# Khởi tạo đồ thị toàn cục
 G = nx.DiGraph()
 
+# Hằng số tốc độ mặc định
 SPEED = {
     "walk": 1.4,
     "rail": 12
 }
 
-
 # ================= UTIL =================
 def haversine(lon1, lat1, lon2, lat2):
+    """Tính khoảng cách Haversine giữa hai điểm (mét)."""
     from math import radians, cos, sin, asin, sqrt
 
     R = 6371000
@@ -21,8 +25,20 @@ def haversine(lon1, lat1, lon2, lat2):
     a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2) ** 2
     return 2 * R * asin(sqrt(a))
 
+# ================= LOAD GRAPH (DÙNG CHO APP.PY) =================
+def load_graph():
+    """Nạp đồ thị từ file cache/graph.pkl."""
+    file_path = "cache/graph.pkl"
+    if os.path.exists(file_path):
+        try:
+            with open(file_path, "rb") as f:
+                return pickle.load(f)
+        except Exception as e:
+            print(f"❌ Lỗi khi nạp đồ thị: {e}")
+            return None
+    return None
 
-# ================= RAIL GRAPH (GIỮ NGUYÊN LOGIC) =================
+# ================= RAIL GRAPH =================
 def build_rail_graph(data_dir):
     print("🚆 Building RAIL graph...")
 
@@ -35,14 +51,14 @@ def build_rail_graph(data_dir):
     with open(os.path.join(data_dir, "lines_clean.json"), encoding="utf-8") as f:
         lines = json.load(f)
 
-    # valid MRT lines
+    # Lọc các tuyến MRT hợp lệ
     valid_lines = {
         str(l.get("LINE_ID") or l.get("ID")).strip()
         for l in lines
         if str(l.get("TYPEE") or l.get("TYPE")).upper() == "MRT"
     }
 
-    # build sequence per line
+    # Xây dựng thứ tự trạm cho mỗi tuyến
     mrt_seq = {}
     valid_stations = set()
 
@@ -53,7 +69,7 @@ def build_rail_graph(data_dir):
             valid_stations.add(sid)
             mrt_seq.setdefault(lid, []).append(item)
 
-    # add rail nodes
+    # Thêm các nút rail
     for s in stops:
         sid = str(s.get("stop_id")).strip()
 
@@ -66,7 +82,7 @@ def build_rail_graph(data_dir):
                 mode="rail"
             )
 
-    # add rail edges (2 chiều)
+    # Thêm các cạnh rail (2 chiều)
     for lid, stations in mrt_seq.items():
         stations.sort(key=lambda x: int(x.get("STOP_SEQUENCE") or 0))
 
@@ -85,17 +101,16 @@ def build_rail_graph(data_dir):
                 n2["stop_lon"], n2["stop_lat"]
             )
 
+            # Thời gian di chuyển = khoảng cách / tốc độ + 30 giây dừng ga
             time = dist / SPEED["rail"] + 30
 
             G.add_edge(u, v, length=dist, travel_time=time, mode="rail", line=lid)
             G.add_edge(v, u, length=dist, travel_time=time, mode="rail", line=lid)
 
-
-# ================= WALK GRAPH (MỚI THEO YÊU CẦU) =================
+# ================= WALK GRAPH =================
 def build_walk_graph(data_dir):
     print("🚶 Building WALK graph from stops_raw...")
 
-    # load rail nodes để loại trùng
     rail_ids = {
         n.replace("rail_", "")
         for n, d in G.nodes(data=True)
@@ -110,12 +125,10 @@ def build_walk_graph(data_dir):
     for s in stops:
         sid = str(s.get("stop_id")).strip()
 
-        # bỏ nếu là rail node
         if sid in rail_ids:
             continue
 
         node_id = f"walk_{sid}"
-
         lat = float(s.get("stop_lat"))
         lon = float(s.get("stop_lon"))
 
@@ -126,16 +139,11 @@ def build_walk_graph(data_dir):
             name=s.get("stop_name"),
             mode="walk"
         )
-
         walk_nodes.append(node_id)
 
-    # add walk edges (optional - nối gần kề nếu muốn)
-    # (ở đây giữ đơn giản: không cần connect walk-to-walk)
+    print(f"✔ Walk nodes created: {len(walk_nodes)}")
 
-    print(f"✔ Walk nodes: {len(walk_nodes)}")
-
-
-# ================= RAIL ↔ WALK (ALL-TO-ALL 2 CHIỀU) =================
+# ================= RAIL ↔ WALK (CONNECTING) =================
 def connect_rail_walk():
     print("🔗 Connecting RAIL ↔ WALK (ALL TO ALL)...")
 
@@ -151,47 +159,39 @@ def connect_rail_walk():
 
     for r_id, r in rail_nodes:
         for w_id, w in walk_nodes:
-
             dist = haversine(
                 r["stop_lon"], r["stop_lat"],
                 w["stop_lon"], w["stop_lat"]
             )
 
+            # Thời gian chuyển tiếp bằng đi bộ
             time = dist / SPEED["walk"]
 
-            # 2 chiều
             G.add_edge(r_id, w_id, length=dist, travel_time=time, mode="transfer")
             G.add_edge(w_id, r_id, length=dist, travel_time=time, mode="transfer")
-
 
 # ================= SAVE =================
 def save_graph():
     os.makedirs("cache", exist_ok=True)
-
-    import pickle
-
     with open("cache/graph.pkl", "wb") as f:
         pickle.dump(G, f)
-
-    print("💾 Saved graph.pkl")
-
+    print("💾 Saved graph.pkl to cache/")
 
 # ================= MAIN =================
 def build_graph_normal(data_dir):
     print("🚀 BUILD GRAPH NORMAL START")
-
     build_rail_graph(data_dir)
     build_walk_graph(data_dir)
     connect_rail_walk()
     save_graph()
-
-    print(f"📊 Nodes: {G.number_of_nodes()} | Edges: {G.number_of_edges()}")
-
+    print(f"📊 Final Graph Status - Nodes: {G.number_of_nodes()} | Edges: {G.number_of_edges()}")
 
 if __name__ == "__main__":
-    
+    # Xác định đường dẫn tương đối đến thư mục DATA
     BASE_DIR = Path(__file__).resolve().parent.parent
-    
     DATA_PATH = BASE_DIR / "DATA"
     
-    build_graph_normal(data_dir=str(DATA_PATH))
+    if DATA_PATH.exists():
+        build_graph_normal(data_dir=str(DATA_PATH))
+    else:
+        print(f"❌ Không tìm thấy thư mục DATA tại: {DATA_PATH}")
