@@ -1,7 +1,7 @@
 """
 main_app.py – Flask backend cho Bangkok MRT Route Finder.
 Sử dụng A* (astar.py) để tìm đường.
-Chỉ tải đồ thị từ cache (graph.pkl). Nếu chưa có cache, hãy chạy Build_graph.py trước.
+Chỉ tải đồ thị từ cache (graph.pkl). Nếu chưa có cache, hãy chạy BuildGraphNormal.py trước.
 """
 
 import os
@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 from math import radians, cos, sin, asin, sqrt
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import networkx as nx
 
@@ -51,7 +51,7 @@ def get_graph():
     """Trả về đồ thị nếu đã sẵn sàng."""
     with _graph_lock:
         if _graph is None:
-            raise RuntimeError("Đồ thị chưa được tải. Hãy chạy Build_graph.py trước.")
+            raise RuntimeError("Đồ thị chưa được tải. Hãy chạy BuildGraphNormal.py trước.")
         return _graph
 
 def _get_node_coords(G, node):
@@ -91,7 +91,7 @@ def init_graph():
     if G is None:
         raise FileNotFoundError(
             "Không tìm thấy file cache/graph.pkl. "
-            "Hãy chạy Build_graph.py để tạo đồ thị trước khi khởi động server."
+            "Hãy chạy BuildGraphNormal.py để tạo đồ thị trước khi khởi động server."
         )
     with _graph_lock:
         _graph = G
@@ -104,19 +104,48 @@ except Exception as e:
     # Server vẫn chạy, các API sẽ báo lỗi 503
 
 # ----------------------------------------------------------------------
-# API – Trang chủ (phục vụ index.html)
+# API – Trang chủ
 # ----------------------------------------------------------------------
 @app.route("/")
-def index():
-    from flask import send_from_directory
-    frontend_dir = Path(__file__).resolve().parent.parent  # lên 1 cấp (IT3160-Project)
-    return send_from_directory(str(frontend_dir), "index.html")
+def root():
+    """Khi truy cập địa chỉ gốc, hiển thị trang Đăng nhập trước."""
+    root_dir = Path(__file__).resolve().parent.parent
+    return send_from_directory(str(root_dir / "Frontend" / "HTML"), "login.html")
+
+@app.route("/home")
+@app.route("/index.html")
+def home_page():
+    """Trang bản đồ chính (sau khi đăng nhập xong)."""
+    root_dir = Path(__file__).resolve().parent.parent
+    return send_from_directory(str(root_dir / "Frontend" / "HTML"), "index.html")
+
+@app.route("/admin")
+@app.route("/admin.html")
+def admin_page():
+    """Trang quản trị sự cố."""
+    root_dir = Path(__file__).resolve().parent.parent
+    return send_from_directory(str(root_dir / "Frontend" / "HTML"), "admin.html")
+
+@app.route("/login")
+@app.route("/login.html")
+def login_page():
+    """Trang đăng nhập (dùng cho các liên kết trực tiếp)."""
+    root_dir = Path(__file__).resolve().parent.parent
+    return send_from_directory(str(root_dir / "Frontend" / "HTML"), "login.html")
 
 @app.route("/<path:filename>")
 def static_files(filename):
-    from flask import send_from_directory
-    frontend_dir = Path(__file__).resolve().parent.parent
-    return send_from_directory(str(frontend_dir), filename)
+    """Phục vụ CSS, JS và các tệp trong thư mục Frontend."""
+    root_dir = Path(__file__).resolve().parent.parent
+    frontend_dir = root_dir / "Frontend"
+    
+    # Tìm file trong thư mục Frontend/ (cho CSS/JS) hoặc Frontend/HTML/
+    if (frontend_dir / filename).exists():
+        return send_from_directory(str(frontend_dir), filename)
+    elif (frontend_dir / "HTML" / filename).exists():
+        return send_from_directory(str(frontend_dir / "HTML"), filename)
+        
+    return jsonify({"error": "File not found"}), 404
 
 # ----------------------------------------------------------------------
 # API – Lấy danh sách trạm MRT
