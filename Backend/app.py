@@ -296,6 +296,7 @@ def admin_node_outage():
         return jsonify({"error": "affected_nodes phải là list"}), 400
 
     with _admin_lock:
+        _blocked_nodes.clear()
         _blocked_nodes.update(nodes)
     log.info("Đã đóng %d trạm, tổng: %d", len(nodes), len(_blocked_nodes))
     return jsonify({"ok": True, "blocked_nodes_count": len(_blocked_nodes)})
@@ -322,6 +323,7 @@ def admin_edge_outage():
             log.warning("Không parse được edge: %s", edge_str)
 
     with _admin_lock:
+        _blocked_edges.clear()
         _blocked_edges.update(parsed_edges)
     log.info("Đã chặn %d đoạn ray, tổng: %d", len(parsed_edges), len(_blocked_edges))
     return jsonify({"ok": True, "blocked_edges_count": len(_blocked_edges)})
@@ -337,6 +339,7 @@ def admin_transfer_issue():
         return jsonify({"error": "affected_nodes phải là object {stop_id: severity}"}), 400
 
     with _admin_lock:
+        _transfer_issues.clear()
         _transfer_issues.update(affected)
     log.info("Đã cập nhật lỗi chuyển tuyến cho %d trạm", len(affected))
     return jsonify({"ok": True, "transfer_issues_count": len(_transfer_issues)})

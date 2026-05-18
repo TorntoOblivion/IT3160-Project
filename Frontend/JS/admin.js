@@ -73,7 +73,7 @@ document.getElementById('btn-node-outage').onclick = () => {
     currentMode = 'NODE';
     statusMsg.innerText = "Chế độ ĐÓNG TRẠM: Click vào các trạm (chấm tròn) trên bản đồ.";
     statusMsg.style.color = "blue";
-    btnOk.style.display = blockedNodes.length > 0 ? 'inline-block' : 'none';
+    btnOk.style.display = 'inline-block';
     
     // Đổi màu nút Node: Viền xanh, nền xanh nhạt
     highlightButton('btn-node-outage', 'blue', '#e6f2ff'); 
@@ -83,7 +83,7 @@ document.getElementById('btn-edge-outage').onclick = () => {
     currentMode = 'EDGE';
     statusMsg.innerText = "Chế độ CHẶN RAY: Click vào đường nối giữa 2 trạm.";
     statusMsg.style.color = "#d35400"; 
-    btnOk.style.display = blockedEdges.length > 0 ? 'inline-block' : 'none';
+    btnOk.style.display = 'inline-block';
     
     // Đổi màu nút Edge: Viền cam đậm, nền cam nhạt
     highlightButton('btn-edge-outage', '#d35400', '#fdebd0');
@@ -95,7 +95,7 @@ function setTransferMode(severity, color, bgColor, text, btnId) {
     currentSeverity = severity;
     statusMsg.innerText = `Chế độ LỖI ${text}: Click trạm để áp dụng.`;
     statusMsg.style.color = color;
-    btnOk.style.display = Object.keys(transferIssues).length > 0 ? 'inline-block' : 'none';
+    btnOk.style.display = 'inline-block';
     
     // Highlight nút vừa bấm
     highlightButton(btnId, color, bgColor);
@@ -107,7 +107,7 @@ document.getElementById('btn-transfer-extreme').onclick = () => setTransferMode(
 
 document.getElementById('btn-clear-all').onclick = () => {
     if (confirm("Bạn có chắc chắn muốn xóa toàn bộ kịch bản và mở lại toàn bộ hệ thống?")) {
-        fetch('http://127.0.0.1:5000/api/scenarios/clear', { method: 'POST' })
+        fetch('http://127.0.0.1:5000/api/admin/clear', { method: 'POST' })
             .then(res => res.json())
             .then(data => {
                 alert("Hệ thống đã được khôi phục trạng thái bình thường!");
@@ -120,11 +120,18 @@ document.getElementById('btn-clear-all').onclick = () => {
 
 
 // 3. TẢI DỮ LIỆU VÀ VẼ BẢN ĐỒ
+// 3. TẢI DỮ LIỆU VÀ VẼ BẢN ĐỒ (Đã bổ sung đồng bộ trạng thái cũ khi reload)
 Promise.all([
     fetch('../data/stops_raw.json').then(res => res.json()), 
     fetch('../data/lines_clean.json').then(res => res.json()),
-    fetch('../data/station_line_clean.json').then(res => res.json())
-]).then(([stopsData, linesData, sequenceData]) => {
+    fetch('../data/station_line_clean.json').then(res => res.json()),
+    // Gọi thêm API để lấy các kịch bản đang chạy trên Backend
+    fetch('http://127.0.0.1:5000/api/admin/status').then(res => res.json()).catch(() => ({ blocked_nodes: [], blocked_edges: [], transfer_issues: {} }))
+]).then(([stopsData, linesData, sequenceData, statusData]) => {
+
+    // Nạp lại dữ liệu cũ từ server vào các biến toàn cục để không bị mất khi reload trang
+    blockedNodes = statusData.blocked_nodes || [];
+    transferIssues = statusData.transfer_issues || {};
 
     function getVal(obj, possibleNames) {
         if (!obj) return null;
@@ -187,46 +194,127 @@ Promise.all([
                 const lonB = parseFloat(getVal(stB, ["stop_lon", "LON"]));
 
                 if (latA && lonA && latB && lonB) {
-                    // Tạo ID định danh duy nhất cho đoạn ray này (VD: Line1_StationA_StationB)
                     const edgeId = `${lineId}_${stIdA}_${stIdB}`;
                     const nameA = getVal(stA, ["stop_name", "NAME"]);
                     const nameB = getVal(stB, ["stop_name", "NAME"]);
 
-                    // Vẽ đoạn ray
+                    // KIỂM TRA XEM ĐOẠN RAY CÓ ĐANG BỊ CHẶN TRÊN SERVER KHÔNG
+                    const isInitiallyBlocked = (statusData.blocked_edges || []).some(eStr => {
+                        const parts = eStr.split('_');
+                        return (parts[0] === stIdA && parts[1] === stIdB) || (parts[0] === stIdB && parts[1] === stIdA);
+                    });
+
+                    let initialColor = lineColor;
+                    let initialWeight = 6;
+                    let initialDash = null;
+
+                    if (isInitiallyBlocked) {
+                        initialColor = "#ff0000";
+                        initialWeight = 8;
+                        initialDash = '10, 10';
+                        if (!blockedEdges.includes(edgeId)) {
+                            blockedEdges.push(edgeId); // Giữ lại trạng thái để click mở lại được
+                        }
+                    }
+
+                    // Vẽ đoạn ray với màu sắc ban đầu chính xác
                     const edgeSegment = L.polyline([[latA, lonA], [latB, lonB]], { 
-                        color: lineColor, 
-                        weight: 6, 
+                        color: initialColor, 
+                        weight: initialWeight, 
+                        dashArray: initialDash,
                         opacity: 0.8 
                     }).addTo(map);
 
-                    // Thêm tooltip báo tên 2 trạm nối nhau
                     edgeSegment.bindTooltip(`Tuyến: ${lineId} <br>Đoạn: <b>${nameA} ↔ ${nameB}</b>`);
 
-                    // ⚡ LOGIC CLICK CHẶN RAY ⚡
                     edgeSegment.on('click', function() {
                         if (currentMode === 'EDGE') {
                             if (blockedEdges.includes(edgeId)) {
-                                // Mở lại đoạn ray (trả về màu gốc, nét liền)
                                 blockedEdges = blockedEdges.filter(eId => eId !== edgeId);
                                 this.setStyle({ color: lineColor, weight: 6, dashArray: null }); 
                                 statusMsg.innerText = `Đã MỞ LẠI đoạn: ${nameA} ↔ ${nameB}`;
                                 statusMsg.style.color = "green";
                             } else {
-                                // Chặn đoạn ray (đổi sang màu đỏ, nét đứt cảnh báo)
                                 blockedEdges.push(edgeId);
                                 this.setStyle({ color: "#ff0000", weight: 8, dashArray: '10, 10' }); 
                                 statusMsg.innerText = `Đã CHẶN đoạn: ${nameA} ↔ ${nameB}`;
                                 statusMsg.style.color = "red";
                             }
-
-                            // Hiện nút OK nếu có ít nhất 1 cạnh bị chặn
-                            btnOk.style.display = blockedEdges.length > 0 ? 'inline-block' : 'none';
+                            btnOk.style.display = 'inline-block';
                         }
                     });
                 }
             }
         }
     }
+
+    // === BƯỚC 3: VẼ TRẠM (NODES) VÀ LOGIC ADMIN ===
+    validStops.forEach(station => {
+        const lat = parseFloat(getVal(station, ["stop_lat", "LAT"]));
+        const lon = parseFloat(getVal(station, ["stop_lon", "LON"]));
+        const name = getVal(station, ["stop_name", "NAME"]);
+        const id = String(getVal(station, ["stop_id", "ID"])).trim();
+
+        if (lat && lon) {
+            // KIỂM TRA TRẠNG THÁI TRẠM TỪ BACKEND ĐỂ ĐỔI MÀU KHI RE-LOAD
+            const isClosed = (statusData.blocked_nodes || []).includes(id);
+            const transferSeverity = (statusData.transfer_issues || {})[id];
+
+            let initialFillColor = "#ffffff";
+            let initialRadius = 4;
+
+            if (isClosed) {
+                initialFillColor = "#ff0000";
+                initialRadius = 7;
+            } else if (transferSeverity) {
+                initialFillColor = transferSeverity === 'light' ? '#f1c40f' : (transferSeverity === 'heavy' ? '#e67e22' : '#8e44ad');
+                initialRadius = transferSeverity === 'light' ? 6 : (transferSeverity === 'heavy' ? 7 : 8);
+            }
+
+            const marker = L.circleMarker([lat, lon], {
+                radius: initialRadius,
+                fillColor: initialFillColor,
+                color: "#000",
+                weight: 2,
+                fillOpacity: 1
+            }).addTo(map);
+
+            marker.bindTooltip(`<b>${name}</b>`);
+
+            marker.on('click', function() {
+                if (currentMode === 'NODE') {
+                    if (blockedNodes.includes(id)) {
+                        blockedNodes = blockedNodes.filter(nId => nId !== id);
+                        this.setStyle({ fillColor: "#ffffff", radius: 4 }); 
+                        statusMsg.innerText = `Đã MỞ LẠI trạm: ${name}`;
+                        statusMsg.style.color = "green";
+                    } else {
+                        blockedNodes.push(id);
+                        this.setStyle({ fillColor: "#ff0000", radius: 7 }); 
+                        statusMsg.innerText = `Đã ĐÓNG trạm: ${name}`;
+                        statusMsg.style.color = "red";
+                    }
+                    btnOk.style.display = 'inline-block';
+                }
+                else if (currentMode === 'TRANSFER') {
+                    if (transferIssues[id] === currentSeverity) {
+                        delete transferIssues[id]; 
+                        this.setStyle({ fillColor: "#ffffff", radius: 4 }); 
+                        statusMsg.innerText = `Đã HỦY lỗi tại: ${name}`;
+                        statusMsg.style.color = "green";
+                    } 
+                    else {
+                        transferIssues[id] = currentSeverity; 
+                        const tColor = currentSeverity === 'light' ? '#f1c40f' : (currentSeverity === 'heavy' ? '#e67e22' : '#8e44ad');
+                        const tRadius = currentSeverity === 'light' ? 6 : (currentSeverity === 'heavy' ? 7 : 8);
+                        this.setStyle({ fillColor: tColor, radius: tRadius }); 
+                        statusMsg.innerText = `Đã đặt lỗi ${currentSeverity.toUpperCase()} tại: ${name}`;
+                    }
+                    btnOk.style.display = 'inline-block';
+                }
+            });
+        }
+    });
 
     // === BƯỚC 3: VẼ TRẠM (NODES) VÀ LOGIC ADMIN ===
     validStops.forEach(station => {
@@ -259,7 +347,7 @@ Promise.all([
                         statusMsg.innerText = `Đã ĐÓNG trạm: ${name}`;
                         statusMsg.style.color = "red";
                     }
-                    btnOk.style.display = blockedNodes.length > 0 ? 'inline-block' : 'none';
+                    btnOk.style.display = 'inline-block';
                 }
                 else if (currentMode === 'TRANSFER') {
                     // Nếu trạm đã bị lỗi và Admin click lại cùng một mức độ -> Hủy lỗi (Trả về màu trắng)
@@ -282,7 +370,7 @@ Promise.all([
                     }
 
                     // Hiện nút OK nếu có ít nhất 1 key trong Object
-                    btnOk.style.display = Object.keys(transferIssues).length > 0 ? 'inline-block' : 'none';
+                    btnOk.style.display = 'inline-block';
                 }
             });
         }
@@ -291,14 +379,17 @@ Promise.all([
     // === BƯỚC 4: XỬ LÝ SỰ KIỆN NÚT OK ===
     // === BƯỚC 4: XỬ LÝ SỰ KIỆN NÚT OK ===
     btnOk.onclick = async () => {
-        // Hàm gửi API chung cho gọn code
-        const sendScenario = (payload, successText) => {
-            fetch('http://127.0.0.1:5000/api/scenarios/create', {
+        // Cập nhật hàm gửi API để nhận tham số URL tương ứng với từng Backend Route
+        const sendScenario = (url, payload, successText) => {
+            fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             })
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) throw new Error("Lỗi API"); // Bắt lỗi 404 nếu sai đường dẫn
+                return res.json();
+            })
             .then(data => {
                 statusMsg.innerText = `✅ ${successText}`;
                 statusMsg.style.color = "green";
@@ -306,7 +397,7 @@ Promise.all([
                 btnOk.style.display = 'none';
             })
             .catch(err => {
-                statusMsg.innerText = "❌ Lỗi kết nối: Backend Python chưa bật!";
+                statusMsg.innerText = "❌ Lỗi kết nối: Backend Python chưa bật hoặc sai đường dẫn!";
                 statusMsg.style.color = "red";
                 console.error("Lỗi đồng bộ:", err);
             });
@@ -315,7 +406,8 @@ Promise.all([
         if (currentMode === 'NODE') {
             if (confirm(`Xác nhận ĐÓNG ${blockedNodes.length} trạm?`)) {
                 sendScenario(
-                    { type: 'NODE_OUTAGE', affected_nodes: blockedNodes }, 
+                    'http://127.0.0.1:5000/api/admin/node_outage', // Gọi đúng API Đóng Trạm
+                    { affected_nodes: blockedNodes }, 
                     "Đã đồng bộ kịch bản ĐÓNG TRẠM lên Server!"
                 );
             }
@@ -323,7 +415,8 @@ Promise.all([
         else if (currentMode === 'EDGE') {
             if (confirm(`Xác nhận tạo kịch bản chặn ${blockedEdges.length} đoạn ray?`)) {
                 sendScenario(
-                    { type: 'EDGE_OUTAGE', affected_edges: blockedEdges }, 
+                    'http://127.0.0.1:5000/api/admin/edge_outage', // Gọi đúng API Chặn Ray
+                    { affected_edges: blockedEdges }, 
                     "Đã đồng bộ kịch bản CHẶN RAY lên Server!"
                 );
             }
@@ -331,7 +424,8 @@ Promise.all([
         else if (currentMode === 'TRANSFER') {
             if (confirm(`Xác nhận tạo kịch bản Lỗi đổi tuyến cho ${Object.keys(transferIssues).length} trạm?`)) {
                 sendScenario(
-                    { type: 'TRANSFER_ISSUE', affected_nodes: transferIssues }, 
+                    'http://127.0.0.1:5000/api/admin/transfer_issue', // Gọi đúng API Lỗi Tuyến
+                    { affected_nodes: transferIssues }, 
                     "Đã đồng bộ kịch bản LỖI ĐỔI TUYẾN lên Server!"
                 );
             }

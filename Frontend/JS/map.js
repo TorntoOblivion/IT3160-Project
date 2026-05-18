@@ -34,11 +34,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 2. TẢI DỮ LIỆU ĐỒNG THỜI
     Promise.all([
-        fetch('../Data/stops_raw.json').then(res => res.json()),
-        fetch('../Data/lines_clean.json').then(res => res.json()),
-        fetch('../Data/station_line_clean.json').then(res => res.json()),
-        fetch('http://127.0.0.1:5000/api/scenarios').then(res => res.json()).catch(() => ({ NODE_OUTAGE: [], EDGE_OUTAGE: [], TRANSFER_ISSUE: {} }))
-    ]).then(([stopsData, linesData, sequenceData, scenariosData]) => {
+    fetch('../Data/stops_raw.json').then(res => res.json()),
+    fetch('../Data/lines_clean.json').then(res => res.json()),
+    fetch('../Data/station_line_clean.json').then(res => res.json()),
+    // Đổi đường dẫn thành /api/admin/status và chuyển đổi định dạng dữ liệu trả về phù hợp với Frontend
+    fetch('http://127.0.0.1:5000/api/admin/status').then(res => res.json()).then(status => ({
+        NODE_OUTAGE: status.blocked_nodes || [],
+        EDGE_OUTAGE: status.blocked_edges || [],
+        TRANSFER_ISSUE: status.transfer_issues || {}
+    })).catch(() => ({ NODE_OUTAGE: [], EDGE_OUTAGE: [], TRANSFER_ISSUE: {} }))
+]).then(([stopsData, linesData, sequenceData, scenariosData]) => {
         
         window.activeScenarios = scenariosData || { NODE_OUTAGE: [], EDGE_OUTAGE: [], TRANSFER_ISSUE: {} };
 
@@ -179,10 +184,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 6. LOGIC ĐỒNG BỘ HÓA REAL-TIME (POLLING) ---
     function syncUI() {
-        fetch('http://127.0.0.1:5000/api/scenarios')
+        // Sửa lại đường dẫn endpoint cho đúng với app.py công bố
+        fetch('http://127.0.0.1:5000/api/admin/status')
             .then(res => res.json())
-            .then(scenarios => {
-                window.activeScenarios = scenarios || { NODE_OUTAGE: [], EDGE_OUTAGE: [], TRANSFER_ISSUE: {} };
+            .then(status => {
+                // Map lại cấu trúc object từ Backend sang Frontend
+                window.activeScenarios = {
+                    NODE_OUTAGE: status.blocked_nodes || [],
+                    EDGE_OUTAGE: status.blocked_edges || [],
+                    TRANSFER_ISSUE: status.transfer_issues || {}
+                };
 
                 // 6.1. Cập nhật Trạm (Nodes)
                 for (const stId in window.nodeLayers) {
@@ -208,10 +219,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 6.2. Cập nhật Tuyến (Edges)
                 for (const edgeId in window.edgeLayers) {
                     const { layer, color } = window.edgeLayers[edgeId];
-                    const parts = edgeId.split('_');
-                    const reverseEdgeId = `${parts[0]}_${parts[2]}_${parts[1]}`; // Đảo chiều 2 trạm
+                    const parts = edgeId.split('_'); // parts = [LineId, Trạm A, Trạm B]
                     
-                    const isBlocked = window.activeScenarios.EDGE_OUTAGE.includes(edgeId) || window.activeScenarios.EDGE_OUTAGE.includes(reverseEdgeId);
+                    // Tạo lại chuỗi format giống hệt Backend trả về (Chỉ có IDTrạmA_IDTrạmB)
+                    const backendEdge1 = `${parts[1]}_${parts[2]}`;
+                    const backendEdge2 = `${parts[2]}_${parts[1]}`;
+                    
+                    // So sánh với mảng EDGE_OUTAGE
+                    const isBlocked = window.activeScenarios.EDGE_OUTAGE.includes(backendEdge1) || window.activeScenarios.EDGE_OUTAGE.includes(backendEdge2);
 
                     if (isBlocked) {
                         layer.setStyle({ color: "#ff0000", weight: 6, dashArray: '10, 10' });

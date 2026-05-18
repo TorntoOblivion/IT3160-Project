@@ -8,7 +8,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Thông tin đăng nhập giả lập (Mock Credentials)
     const MOCK_USER = "admin";
-    const MOCK_PASS = "hust2026"; // Mật khẩu của một sinh viên Bách Khoa
+    const MOCK_PASS = "admin";
+    const user_user = "user";
+    const user_pass = "user";
 
     // 2. Bắt sự kiện khi người dùng nhấn nút Submit (Login)
     loginForm.addEventListener('submit', (event) => {
@@ -32,6 +34,16 @@ document.addEventListener('DOMContentLoaded', () => {
             // 4. Chuyển hướng sang trang quản trị
             // Đường dẫn này tùy thuộc vào vị trí file của bạn
             window.location.href = "admin.html"; 
+        } else if (enteredUser === user_user && enteredPass === user_pass) {
+            alert("Đăng nhập thành công! Chào mừng bạn.");
+
+            // Lưu trạng thái đăng nhập vào Local Storage của trình duyệt
+            // Điều này giúp trang user.html biết bạn đã vượt qua cửa bảo vệ
+            localStorage.setItem('isLoggedIn', 'true');
+            localStorage.setItem('userUser', enteredUser);
+
+            // 4. Chuyển hướng sang trang người dùng
+            window.location.href = "index.html";
         } else {
             // Hiển thị thông báo nếu sai thông tin
             alert("Tên đăng nhập hoặc mật khẩu không đúng. Vui lòng kiểm tra lại!");
