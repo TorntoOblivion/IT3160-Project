@@ -13,8 +13,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const startId = String(window.startData.stop_id || window.startData.ID).trim();
-        const endId = String(window.endData.stop_id || window.endData.ID).trim();
+        const startLat = window.startData.lat;
+        const startLon = window.startData.lng;
+        const endLat = window.endData.lat;
+        const endLon = window.endData.lng;
 
         routeText.innerHTML = "<span style='color: #2563eb; font-weight: bold;'>Đang tính toán hành trình tối ưu...</span>";
         findRouteBtn.disabled = true;
@@ -24,13 +26,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('http://127.0.0.1:5000/api/find_route', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ start: startId, end: endId })
+                body: JSON.stringify({ 
+                    start_lat: startLat, 
+                    start_lng: startLon, 
+                    end_lat: endLat, 
+                    end_lng: endLon 
+                }) // Đã đổi sang truyền Tọa độ
             });
 
             const resultData = await response.json();
             
             if (!response.ok) {
-                throw new Error(resultData.message || "Máy chủ AI từ chối trả lời");
+                
+                throw new Error(resultData.error || resultData.message || "Máy chủ AI từ chối trả lời");
             }
             
             // --- XÂY DỰNG BẢNG HƯỚNG DẪN DI CHUYỂN (ITINERARY) ---
@@ -77,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
 
             // 👉 NGUỒN GỐC LỖI Ở ĐÂY: Gọi đúng biến path_details chứa tọa độ
-            drawRouteOnMap(resultData.path_details);
+            drawRouteOnMap(resultData.path_details, resultData.path);
 
         } catch (error) {
             console.error("Lỗi:", error);
@@ -99,40 +107,57 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// --- HÀM PHỤ: Tìm tên trạm tàu từ tọa độ (để gắn nhãn cho đẹp) ---
+function getStationNameByCoords(lat, lon) {
+    if (!window.nodeLayers) return "Trạm tàu";
+    for (const stId in window.nodeLayers) {
+        const layer = window.nodeLayers[stId].layer;
+        const stLatLng = layer.getLatLng();
+        // Kiểm tra tọa độ trùng khớp (với sai số cực nhỏ do sai số float)
+        if (Math.abs(stLatLng.lat - lat) < 0.0001 && Math.abs(stLatLng.lng - lon) < 0.0001) {
+            return window.nodeLayers[stId].name;
+        }
+    }
+    return "Trạm tàu";
+}
+
 // --- 3. HÀM VẼ ĐƯỜNG ĐA PHƯƠNG THỨC LÊN BẢN ĐỒ ---
-function drawRouteOnMap(pathDetails) {
+function drawRouteOnMap(pathDetails, pathIds) {
     if (currentRouteLine && window.map) {
         window.map.removeLayer(currentRouteLine);
     }
 
     currentRouteLine = L.featureGroup().addTo(window.map);
 
-    // Kiểm tra an toàn dữ liệu
-    if (!pathDetails || !Array.isArray(pathDetails)) {
-        console.error("Lỗi: Dữ liệu path_details không hợp lệ!");
+    if (!pathDetails || !Array.isArray(pathDetails) || pathDetails.length === 0) {
+        console.error("Lỗi: Dữ liệu lộ trình không hợp lệ!");
         return;
     }
 
-    pathDetails.forEach(segment => {
-        // Lấy tọa độ trực tiếp từ Backend gửi sang
+    let prevType = null; // Biến ghi nhớ trạng thái (Đang đi bộ hay đang đi tàu)
+
+    pathDetails.forEach((segment, index) => {
         const latA = segment.latA;
         const lonA = segment.lonA;
         const latB = segment.latB;
         const lonB = segment.lonB;
 
-        // Đảm bảo tọa độ có tồn tại trước khi vẽ
         if (latA !== undefined && lonA !== undefined && latB !== undefined && lonB !== undefined) {
-            if (segment.type === 'walk') {
-                // 🚶 ĐI BỘ: Màu xám đen, nét đứt
+            
+            // -----------------------------------------------------------
+            // A. VẼ ĐƯỜNG (POLYLINE) CÓ NÉT ĐỨT CHO PHẦN ĐI BỘ
+            // -----------------------------------------------------------
+            if (segment.type === 'walk' || segment.type === 'transfer') {
+                // 🚶 ĐI BỘ / TRUNG CHUYỂN: Màu xám đen, vẽ bằng NÉT ĐỨT ('8, 8')
                 L.polyline([[latA, lonA], [latB, lonB]], {
                     color: '#475569',    
                     weight: 5,           
-                    dashArray: '6, 8', 
+                    dashArray: '8, 8', // Nét đứt rõ ràng (8px dash, 8px gap)
                     opacity: 0.9,
                     lineJoin: 'round'
                 }).addTo(currentRouteLine);
-            } else {
-                // 🚇 ĐI TÀU: Màu cam, nét liền
+            } else if (segment.type === 'rail') {
+                // 🚇 ĐI TÀU: Màu cam, NÉT LIỀN
                 L.polyline([[latA, lonA], [latB, lonB]], {
                     color: '#f97316',    
                     weight: 7,
@@ -140,9 +165,48 @@ function drawRouteOnMap(pathDetails) {
                     lineJoin: 'round'
                 }).addTo(currentRouteLine);
             }
+
+            // -----------------------------------------------------------
+            // B. NHẬN DIỆN CÁC ĐIỂM LÊN/XUỐNG TÀU & TRUNG CHUYỂN
+            // -----------------------------------------------------------
+            
+            // 1. NHẬN DIỆN GA LÊN TÀU (Trạng thái trước đó không phải Rail -> Giờ là Rail)
+            if (prevType !== 'rail' && segment.type === 'rail') {
+                const stName = getStationNameByCoords(latA, lonA);
+                let label = prevType === 'transfer' ? `Chuyển tàu tại: ${stName}` : `Lên tàu: ${stName}`;
+                
+                L.circleMarker([latA, lonA], {
+                    radius: 7, fillColor: "#10b981", color: "#047857", weight: 3, fillOpacity: 1
+                }).bindTooltip(`<b>🟢 ${label}</b>`, { permanent: false, direction: 'top', className: 'mini-tooltip', offset: [0, -5] })
+                  .addTo(currentRouteLine);
+            }
+
+            // 2. NHẬN DIỆN GA XUỐNG TÀU (Trạng thái trước đó là Rail -> Giờ chuyển sang Walk/Transfer)
+            if (prevType === 'rail' && segment.type !== 'rail') {
+                const stName = getStationNameByCoords(latA, lonA); // Vị trí A của đoạn đi bộ này chính là điểm xuống tàu
+                let label = segment.type === 'transfer' ? `Đổi tàu tại: ${stName}` : `Xuống tàu: ${stName}`;
+                
+                L.circleMarker([latA, lonA], {
+                    radius: 7, fillColor: "#ef4444", color: "#b91c1c", weight: 3, fillOpacity: 1
+                }).bindTooltip(`<b>🔴 ${label}</b>`, { permanent: false, direction: 'top', className: 'mini-tooltip', offset: [0, -5] })
+                  .addTo(currentRouteLine);
+            }
+            
+            // 3. CHỐT CHẶN (Nếu chặng cuối cùng của cả hành trình vẫn là đi tàu)
+            if (index === pathDetails.length - 1 && segment.type === 'rail') {
+                const stName = getStationNameByCoords(latB, lonB);
+                L.circleMarker([latB, lonB], {
+                    radius: 7, fillColor: "#ef4444", color: "#b91c1c", weight: 3, fillOpacity: 1
+                }).bindTooltip(`<b>🔴 Đích: ${stName}</b>`, { permanent: true, direction: 'top', className: 'mini-tooltip', offset: [0, -5] })
+                  .addTo(currentRouteLine);
+            }
         }
+        
+        // Cập nhật trạng thái để đối chiếu cho vòng lặp tiếp theo
+        prevType = segment.type;
     });
 
+    // Căn chỉnh màn hình vừa vặn với toàn bộ lộ trình
     if (currentRouteLine.getLayers().length > 0 && window.map) {
         window.map.fitBounds(currentRouteLine.getBounds(), { padding: [50, 50] });
     }

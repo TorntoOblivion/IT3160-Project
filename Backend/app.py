@@ -209,58 +209,49 @@ def find_route():
         return jsonify({"error": "Đồ thị chưa sẵn sàng"}), 503
 
     data = request.get_json(force=True)
-    # Có thể truyền start_node/end_node trực tiếp, hoặc start/end (stop_id)
-    start_id = str(data.get("start", "")).strip()
-    end_id   = str(data.get("end", "")).strip()
-    start_node = data.get("start_node")
-    end_node   = data.get("end_node")
-
-    # Nếu không có node trực tiếp thì tìm theo stop_id
-    if not start_node:
-        if start_id:
-            start_node = f"rail_{start_id}"
-        else:
-            return jsonify({"error": "Thiếu start_node hoặc start"}), 400
-    if not end_node:
-        if end_id:
-            end_node = f"rail_{end_id}"
-        else:
-            return jsonify({"error": "Thiếu end_node hoặc end"}), 400
-
-    if start_node not in G or end_node not in G:
-        return jsonify({"error": f"Node không tồn tại: {start_node} hoặc {end_node}"}), 404
-
-    # Lấy tọa độ
-    start_lat, start_lng = _get_node_coords(G, start_node)
-    end_lat, end_lng     = _get_node_coords(G, end_node)
+    
+    # 1. Thay đổi cốt lõi: Lấy thẳng tọa độ click do Frontend gửi lên chứ không lấy ID trạm nữa
+    start_lat = data.get("start_lat")
+    start_lng = data.get("start_lng")
+    end_lat = data.get("end_lat")
+    end_lng = data.get("end_lng")
 
     if None in (start_lat, start_lng, end_lat, end_lng):
-        return jsonify({"error": "Node thiếu tọa độ"}), 500
+        return jsonify({"error": "Thiếu dữ liệu tọa độ điểm đi hoặc điểm đến"}), 400
 
     # Lấy trạng thái sự cố hiện tại
     with _admin_lock:
         blocked_nodes = set(_blocked_nodes)
         blocked_edges = set(_blocked_edges)
 
-    # Chuyển đổi sang định dạng A* cần
-    skipped_stations = {f"rail_{nid}" for nid in blocked_nodes}
+    # Chuyển đổi danh sách trạm bảo trì sang định dạng A* cần
+    skipped_stations = set()
+    for nid in blocked_nodes:
+        skipped_stations.add(f"rail_{nid}")
+        skipped_stations.add(f"walk_{nid}")
+
+    # Chuyển đổi danh sách ray hỏng sang định dạng A* cần
     blocked_edges_set = set()
     for u, v in blocked_edges:
         ru = f"rail_{u}"
         rv = f"rail_{v}"
         blocked_edges_set.add((ru, rv))
         blocked_edges_set.add((rv, ru))
+        
+        wu = f"walk_{u}"
+        wv = f"walk_{v}"
+        blocked_edges_set.add((wu, wv))
+        blocked_edges_set.add((wv, wu))
 
     try:
+        # Gọi thuật toán A* bằng 4 tham số tọa độ thực tế
         result = astar_route(
             G,
-            start_lat, start_lng,
-             end_lat, end_lng,
+            float(start_lat), float(start_lng),
+            float(end_lat), float(end_lng),
             mode="multimodal",
             blocked=blocked_edges_set,
-            skipped_stations=skipped_stations,
-            start_node=start_node,    # <-- thêm
-            end_node=end_node         # <-- thêm
+            skipped_stations=skipped_stations
         )
     except ValueError as e:
         return jsonify({"error": str(e)}), 404
@@ -268,19 +259,35 @@ def find_route():
         log.exception("Lỗi khi chạy A*")
         return jsonify({"error": "Lỗi máy chủ nội bộ"}), 500
 
-    # Lấy danh sách path nodes (đã được astar.py trả về)
     path_nodes = result.get("path_nodes", [])
-    # Lọc rail node để hiển thị danh sách trạm
     rail_path = [n for n in path_nodes if n.startswith("rail_")]
 
-    # Tên điểm
-    start_name = G.nodes[start_node].get("name") if start_node in G else start_node
-    end_name   = G.nodes[end_node].get("name") if end_node in G else end_node
+    # 2. Lấy danh sách TÊN các trạm tàu điện đi qua để hiển thị danh sách lịch trình
+    path_names = []
+    for n in rail_path:
+        path_names.append(G.nodes[n].get("name", n.replace("rail_", "")))
 
+    # 3. Chuyển đổi cấu trúc mảng Segment thành định dạng path_details để Frontend vẽ Polyline
+    path_details = []
+    for seg in result.get("segments", []):
+        coords = seg.get("coords", [])
+        mode = seg.get("mode", "walk")
+        for i in range(len(coords) - 1):
+            path_details.append({
+                "latA": coords[i][0],
+                "lonA": coords[i][1],
+                "latB": coords[i+1][0],
+                "lonB": coords[i+1][1],
+                "type": mode
+            })
+
+    # Trả toàn bộ dữ liệu sạch về cho client
     return jsonify({
-        "start": start_name,
-        "end": end_name,
+        "start": "Vị trí của bạn",
+        "end": "Vị trí đích",
         "path": [n.replace("rail_", "") for n in rail_path],
+        "path_names": path_names,
+        "path_details": path_details,
         "distance": round(result.get("distance_m", 0) / 1000.0, 2),
         "estimated_time": round(result.get("time_s", 0) / 60.0, 1)
     })

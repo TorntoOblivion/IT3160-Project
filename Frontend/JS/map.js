@@ -132,18 +132,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- 5. LOGIC CLICK TỰ DO TRÊN BẢN ĐỒ ---
         function getNearestRawStop(clickedLatLng) {
-            let nearestStop = null;
-            let minDistance = Infinity;
-            arrStops.forEach(stop => {
-                const lat = parseFloat(getVal(stop, ["stop_lat", "LAT"]));
-                const lon = parseFloat(getVal(stop, ["stop_lon", "LON"]));
-                if (lat && lon) {
-                    const distance = window.map.distance(clickedLatLng, L.latLng(lat, lon));
-                    if (distance < minDistance) { minDistance = distance; nearestStop = stop; }
-                }
-            });
-            return nearestStop;
+    let nearestStop = null;
+    let minDistance = Infinity;
+    // Đổi arrStops thành window.globalStops để chỉ bắt các ga MRT hợp lệ
+    window.globalStops.forEach(stop => { 
+        const lat = parseFloat(getVal(stop, ["stop_lat", "LAT"]));
+        const lon = parseFloat(getVal(stop, ["stop_lon", "LON"]));
+        if (lat && lon) {
+            const distance = window.map.distance(clickedLatLng, L.latLng(lat, lon));
+            if (distance < minDistance) { minDistance = distance; nearestStop = stop; }
         }
+    });
+    return nearestStop;
+}
 
         window.map.on('click', function(e) {
             if (window.startData && window.endData) {
@@ -151,32 +152,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const nearestStop = getNearestRawStop(e.latlng);
-            if (!nearestStop) return;
-
-            const stopId = String(getVal(nearestStop, ["stop_id", "ID"])).trim();
-            const stopName = getVal(nearestStop, ["stop_name", "NAME"]);
-            
-            if (window.activeScenarios.NODE_OUTAGE && window.activeScenarios.NODE_OUTAGE.includes(stopId)) {
-                alert(`⚠️ Điểm dừng "${stopName}" hiện đang đóng cửa bảo trì. Vui lòng click chọn một khu vực khác!`);
-                return;
-            }
-
-            const stopLat = parseFloat(getVal(nearestStop, ["stop_lat", "LAT"]));
-            const stopLon = parseFloat(getVal(nearestStop, ["stop_lon", "LON"]));
+            const clickLat = e.latlng.lat;
+            const clickLon = e.latlng.lng;
 
             if (!window.startData) {
-                window.startData = nearestStop;
-                const startPin = L.circleMarker([stopLat, stopLon], { radius: 6, fillColor: "#10b981", color: "#047857", weight: 2, fillOpacity: 1 }).bindTooltip(`<b>Bắt đầu: ${stopName}</b>`, { permanent: true, direction: 'right' }).addTo(window.map);
-                clickMarkers.push(startPin);
-                document.getElementById('start-station').value = stopName;
+                window.startData = { lat: clickLat, lng: clickLon }; // Chỉ lưu tọa độ
+                
+                const startClickPin = L.circleMarker([clickLat, clickLon], { 
+                    radius: 6, fillColor: "#10b981", color: "#047857", weight: 2, fillOpacity: 1 
+                }).bindTooltip(`<b>🟢 Điểm đi</b>`, { permanent: true, direction: 'top', className: 'mini-tooltip', offset: [0, -5] }).addTo(window.map);
+                clickMarkers.push(startClickPin);
+
+                document.getElementById('start-station').value = "Tọa độ đã chọn";
                 document.getElementById('route-text').innerText = "Đã chọn điểm đi. Hãy click để chọn điểm đến.";
+                
             } else if (!window.endData) {
-                if (stopId === String(getVal(window.startData, ["stop_id", "ID"])).trim()) return alert("Điểm đến không được trùng với điểm đi!");
-                window.endData = nearestStop;
-                const endPin = L.circleMarker([stopLat, stopLon], { radius: 6, fillColor: "#ef4444", color: "#b91c1c", weight: 2, fillOpacity: 1 }).bindTooltip(`<b>Kết thúc: ${stopName}</b>`, { permanent: true, direction: 'right' }).addTo(window.map);
-                clickMarkers.push(endPin);
-                document.getElementById('end-station').value = stopName;
+                window.endData = { lat: clickLat, lng: clickLon }; // Chỉ lưu tọa độ
+                
+                const endClickPin = L.circleMarker([clickLat, clickLon], { 
+                    radius: 6, fillColor: "#ef4444", color: "#b91c1c", weight: 2, fillOpacity: 1 
+                }).bindTooltip(`<b>🔴 Điểm đến</b>`, { permanent: true, direction: 'top', className: 'mini-tooltip', offset: [0, -5] }).addTo(window.map);
+                clickMarkers.push(endClickPin);
+
+                document.getElementById('end-station').value = "Tọa độ đã chọn";
                 document.getElementById('route-text').innerText = "Sẵn sàng! Hãy bấm nút Find Route.";
             }
         });

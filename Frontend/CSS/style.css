@@ -123,3 +123,17 @@ button#clear-btn:hover { background-color: #d32f2f; }
     height: 100%;
     z-index: 1;
 }
+.mini-tooltip {
+    padding: 3px 6px !important;
+    font-size: 11px !important;
+    background: rgba(255, 255, 255, 0.85) !important; /* Trong suốt 85% */
+    border-radius: 4px !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;
+    border: 1px solid #cbd5e1 !important;
+    white-space: nowrap;
+    margin-top: 0px;
+}
+
+.mini-tooltip b {
+    font-weight: 600;
+}

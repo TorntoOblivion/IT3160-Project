@@ -76,26 +76,28 @@ def _edge_coords(G, u, v):
         return [[u_lat, u_lng], [v_lat, v_lng]]
     return []
 
+def _k_nearest_nodes(G, lat, lng, skipped, k=3):
+    """Tìm Top K node gần nhất xung quanh 1 tọa độ"""
+    nodes = []
+    for n, d in G.nodes(data=True):
+        if n in skipped: continue
+        nlat, nlng = _get_node_coords(G, n)
+        if nlat is None or nlng is None: continue
+        dist = _haversine(lat, lng, nlat, nlng)
+        nodes.append((n, dist, nlat, nlng))
+    nodes.sort(key=lambda x: x[1])
+    return nodes[:k]
+
 def astar_route(
     G: nx.DiGraph,
-    start_lat: float,
-    start_lng: float,
-    end_lat: float,
-    end_lng: float,
+    start_lat: float, start_lng: float, end_lat: float, end_lng: float,
     mode: str = "multimodal",
     blocked: Optional[Set[Tuple[Any, Any]]] = None,
     skipped_stations: Optional[Set[Any]] = None,
     departure_time_s: Optional[float] = None,
-    start_node: Optional[Any] = None,
-    end_node: Optional[Any] = None,
+    start_node: Optional[Any] = None, end_node: Optional[Any] = None,
 ) -> Dict:
-    """
-    Tìm đường đi tối ưu bằng A*.
-
-    Tham số:
-        start_node, end_node: nếu biết trước node (từ nearest_node API), truyền vào sẽ chính xác.
-    Trả về dict có 'path_nodes' – danh sách node theo thứ tự từ start đến end.
-    """
+    
     blocked = blocked or set()
     skipped = skipped_stations or set()
 
@@ -104,223 +106,172 @@ def astar_route(
         now = datetime.now()
         departure_time_s = now.hour * 3600 + now.minute * 60 + now.second
     departure_time_s = float(departure_time_s)
-
     allowed_modes = {"walk", "rail", "transfer"} if mode == "multimodal" else {mode}
 
-    # --- Xác định node xuất phát/đích ---
-    if start_node is None:
-        start_node = _nearest_node(G, start_lat, start_lng, skipped)
-    if end_node is None:
-        end_node = _nearest_node(G, end_lat, end_lng, skipped)
+    # ĐỊNH NGHĨA VIRTUAL NODES
+    start_node = "VIRTUAL_START"
+    end_node = "VIRTUAL_END"
 
-    if start_node is None or end_node is None:
-        raise ValueError("Không tìm thấy node phù hợp.")
+    # Lấy 3 lựa chọn trạm gần nhất cho cả điểm đầu và điểm cuối
+    start_stations = _k_nearest_nodes(G, start_lat, start_lng, skipped, k=3)
+    end_stations = _k_nearest_nodes(G, end_lat, end_lng, skipped, k=3)
+    end_station_names = {n for n, _, _, _ in end_stations}
 
-    # Trường hợp xuất phát và đích trùng node
-    if start_node == end_node:
-        d = _haversine(start_lat, start_lng, end_lat, end_lng)
-        t = d / _WALK_SPEED
-        return {
-            "coords": [[start_lat, start_lng], [end_lat, end_lng]],
-            "segments": [{
-                "mode": "walk",
-                "from_lat": start_lat, "from_lng": start_lng,
-                "to_lat":   end_lat,   "to_lng":   end_lng,
-                "distance_m": round(d, 1),
-                "time_s": round(t, 1),
-                "name": "Đi bộ thẳng",
-            }],
-            "distance_m": round(d, 1),
-            "time_s": round(t, 1),
-            "walk_time_s": round(t, 1),
-            "rail_time_s": 0.0,
-            "transfer_time_s": 0.0,
-            "departure_time_s": round(departure_time_s, 0),
-            "arrival_time_s": round(departure_time_s + t, 0),
-            "start_node": str(start_node),
-            "end_node": str(end_node),
-            "path_nodes": [start_node, end_node],
-        }
-
-    # --- A* search ---
-    open_heap = [(0.0, 0.0, start_node)]
-    came_from = {start_node: (None, "walk", 0.0)}  # (parent, mode, travel_time_from_parent)
+    open_heap = []
+    came_from = {start_node: (None, "walk", 0.0)}
     g_score = {start_node: 0.0}
     visited = set()
 
+    # TRƯỜNG HỢP 1: Đi bộ trực tiếp từ điểm xuất phát tới đích (Nếu khoảng cách rất gần)
+    dist_direct = _haversine(start_lat, start_lng, end_lat, end_lng)
+    tt_direct = dist_direct / _WALK_SPEED
+    g_score[end_node] = tt_direct
+    heapq.heappush(open_heap, (tt_direct, tt_direct, end_node))
+    came_from[end_node] = (start_node, "walk", tt_direct)
+
+    # TRƯỜNG HỢP 2: Khởi tạo các nhánh đi bộ từ Tọa độ thực tế ra 3 Trạm MRT gần nhất
+    for st, dist, st_lat, st_lng in start_stations:
+        tt = dist / _WALK_SPEED
+        g_score[st] = tt
+        h = _haversine(st_lat, st_lng, end_lat, end_lng) / _RAIL_SPEED
+        heapq.heappush(open_heap, (tt + h, tt, st))
+        came_from[st] = (start_node, "walk", tt)
+
+    # --- A* search ---
     while open_heap:
         f, g, current = heapq.heappop(open_heap)
-        if current in visited:
-            continue
+        if current in visited: continue
         visited.add(current)
 
         if current == end_node:
             break
 
-        for neighbor, edata in G[current].items():
-            if neighbor in visited:
-                continue
+        # Nếu đang đứng ở 1 trong 3 trạm đích tiềm năng, AI tự tạo đường đi bộ về Vị trí đích thực tế
+        if current in end_station_names:
+            clat, clng = _get_node_coords(G, current)
+            dist_to_end = _haversine(clat, clng, end_lat, end_lng)
+            tt_to_end = dist_to_end / _WALK_SPEED
+            tentative_g = g + tt_to_end
             
+            if tentative_g < g_score.get(end_node, float("inf")):
+                g_score[end_node] = tentative_g
+                heapq.heappush(open_heap, (tentative_g, tentative_g, end_node))
+                came_from[end_node] = (current, "walk", tt_to_end)
+
+        # Bỏ qua vì các Node Ảo không nằm trong Đồ thị thực G
+        if current not in G: 
+            continue 
+
+        for neighbor, edata in G[current].items():
+            if neighbor in visited: continue
             edge_mode = edata.get("mode", "walk")
-            if edge_mode not in allowed_modes:
-                continue
-            if (current, neighbor) in blocked:
-                continue
+            if edge_mode not in allowed_modes: continue
+            if (current, neighbor) in blocked: continue
+            
+            # Cấm đi vào vùng ga hỏng
+            if neighbor in skipped: continue
 
             travel_time = edata["travel_time"]
-
-            # 1. Ràng buộc tại ga đang đứng: Cấm đi bộ/transfer ra nếu đang ở ga đóng cửa
-            if current in skipped and current != start_node and current != end_node:
-                if edge_mode != "rail":
-                    continue
-            
-            # 2. Ràng buộc tại ga sắp tới
-            if neighbor in skipped:
-                if edge_mode != "rail":
-                    continue # Không thể đi bộ/transfer vào ga đang đóng cửa
-                else:
-                    travel_time -= _DWELL # Tàu chạy xuyên qua ga skip, không dừng lại
-
-            # Tính toán cost và push vào open list
             tentative_g = g + travel_time
             if tentative_g < g_score.get(neighbor, float("inf")):
                 g_score[neighbor] = tentative_g
-                h = _heuristic(G, neighbor, end_node)
+                
+                # Heuristic hướng về tọa độ đích
+                nlat, nlng = _get_node_coords(G, neighbor)
+                h = _haversine(nlat, nlng, end_lat, end_lng) / _RAIL_SPEED
+                
                 heapq.heappush(open_heap, (tentative_g + h, tentative_g, neighbor))
                 came_from[neighbor] = (current, edge_mode, travel_time)
-
+    
     if end_node not in came_from:
         raise ValueError("Không tìm thấy đường đi.")
-
-    # --- Khôi phục đường đi (danh sách node) ---
+        
+    # --- Khôi phục đường đi ---
     path_nodes = []
     cur = end_node
     while cur != start_node:
         path_nodes.append(cur)
         parent, _, _ = came_from[cur]
-        if parent is None:
-            break
+        if parent is None: break
         cur = parent
     path_nodes.append(start_node)
     path_nodes.reverse()
 
-    # --- Xây dựng segments và tọa độ (dựa trên path_nodes) ---
-    coords_all = []
-    segments = []
-    total_dist = 0.0
-    total_time = 0.0
-    walk_time = 0.0
-    rail_time = 0.0
-    transfer_time = 0.0
-
-    cur_mode = None
+    # --- Trích xuất dữ liệu mượt mà từ Virtual Nodes ---
+    coords_all, segments = [], []
+    total_dist = total_time = walk_time = rail_time = transfer_time = 0.0
+    cur_mode = cur_name = cur_line = None
     cur_coords = []
-    cur_dist = 0.0
-    cur_time = 0.0
-    cur_name = ""
-    cur_line = ""
-    cur_from_lat = None
-    cur_from_lng = None
+    cur_dist = cur_time = 0.0
     cur_dep_s = departure_time_s
+    cur_from_lat = cur_from_lng = None
 
     def flush_segment():
         nonlocal cur_mode, cur_coords, cur_dist, cur_time, cur_name, cur_line, cur_from_lat, cur_from_lng, cur_dep_s
-        if not cur_coords:
-            return
-            
-        # Tính thời điểm bắt đầu của segment hiện tại
+        if not cur_coords: return
         seg_start_time = cur_dep_s - cur_time
-        
         seg = {
-            "mode": cur_mode,
-            "from_lat": cur_from_lat,
-            "from_lng": cur_from_lng,
-            "to_lat": cur_coords[-1][0],
-            "to_lng": cur_coords[-1][1],
-            "distance_m": round(cur_dist, 1),
-            "time_s": round(cur_time, 1),
-            "name": cur_name,
-            "coords": list(cur_coords),
-            "dep_time_s": round(seg_start_time, 0),
-            "arr_time_s": round(cur_dep_s, 0),
+            "mode": cur_mode, "from_lat": cur_from_lat, "from_lng": cur_from_lng,
+            "to_lat": cur_coords[-1][0], "to_lng": cur_coords[-1][1],
+            "distance_m": round(cur_dist, 1), "time_s": round(cur_time, 1),
+            "name": cur_name, "coords": list(cur_coords),
+            "dep_time_s": round(seg_start_time, 0), "arr_time_s": round(cur_dep_s, 0),
         }
-        if cur_line:
-            seg["line"] = cur_line
+        if cur_line: seg["line"] = cur_line
         segments.append(seg)
 
     for i in range(len(path_nodes)-1):
-        u = path_nodes[i]
-        v = path_nodes[i+1]
+        u = path_nodes[i]; v = path_nodes[i+1]
+        
+        # Bắt chính xác tọa độ ảo
+        if u == "VIRTUAL_START":
+            if v == "VIRTUAL_END":
+                coords = [[start_lat, start_lng], [end_lat, end_lng]]
+            else:
+                v_lat, v_lng = _get_node_coords(G, v)
+                coords = [[start_lat, start_lng], [v_lat, v_lng]]
+            mode_e = "walk"; tt = came_from[v][2]; dist = tt * _WALK_SPEED
+            name = "Đi bộ ra ga"; line = ""
+        elif v == "VIRTUAL_END":
+            u_lat, u_lng = _get_node_coords(G, u)
+            coords = [[u_lat, u_lng], [end_lat, end_lng]]
+            mode_e = "walk"; tt = came_from[v][2]; dist = tt * _WALK_SPEED
+            name = "Đi bộ tới đích"; line = ""
+        else:
+            if not G.has_edge(u, v): continue
+            edata = G[u][v]
+            mode_e = edata["mode"]; dist = edata["length"]; tt = came_from[v][2]
+            coords = _edge_coords(G, u, v)
+            name = edata.get("name", ""); line = edata.get("line", "")
 
-        # Đảm bảo có cạnh (với thuật toán mới, 100% sẽ luôn có cạnh trực tiếp)
-        if not G.has_edge(u, v):
-            continue
-            
-        edata = G[u][v]
-        mode_e = edata["mode"]
-        dist = edata["length"]
-        tt = came_from[v][2]   # Lấy travel_time chính xác đã lưu lúc chạy A* (đã trừ DWELL nếu skip)
-        coords = _edge_coords(G, u, v)
-        name = edata.get("name", "")
-        line = edata.get("line", "")
-
-        # Gom vào segment hiện tại
         if cur_mode != mode_e:
             flush_segment()
-            cur_mode = mode_e
-            cur_coords = list(coords)
-            cur_dist = dist
-            cur_time = tt
-            cur_name = name
-            cur_line = line
-            cur_from_lat = coords[0][0]
-            cur_from_lng = coords[0][1]
+            cur_mode = mode_e; cur_coords = list(coords); cur_dist = dist; cur_time = tt
+            cur_name = name; cur_line = line
+            cur_from_lat = coords[0][0]; cur_from_lng = coords[0][1]
         else:
             if cur_coords and cur_coords[-1] == coords[0]:
                 cur_coords.extend(coords[1:])
-            else:
-                cur_coords.extend(coords)
-            cur_dist += dist
-            cur_time += tt
-            if not cur_name and name:
-                cur_name = name
-            if not cur_line and line:
-                cur_line = line
+            else: cur_coords.extend(coords)
+            cur_dist += dist; cur_time += tt
+            if not cur_name and name: cur_name = name
+            if not cur_line and line: cur_line = line
 
-        # Cập nhật tổng
-        if cur_mode == "walk":
-            walk_time += tt
-        elif cur_mode == "rail":
-            rail_time += tt
-        elif cur_mode == "transfer":
-            transfer_time += tt
+        if cur_mode == "walk": walk_time += tt
+        elif cur_mode == "rail": rail_time += tt
+        elif cur_mode == "transfer": transfer_time += tt
             
-        total_dist += dist
-        total_time += tt
-        cur_dep_s += tt  # Tích lũy timeline liên tục
-
-        # Toàn bộ tọa độ vẽ
+        total_dist += dist; total_time += tt; cur_dep_s += tt
         if coords_all and coords_all[-1] == coords[0]:
             coords_all.extend(coords[1:])
-        else:
-            coords_all.extend(coords)
+        else: coords_all.extend(coords)
 
-    # Đẩy segment cuối cùng vào mảng
     flush_segment()
 
-    arrival_time_s = departure_time_s + total_time
-
     return {
-        "coords":           coords_all,
-        "segments":         segments,
-        "distance_m":       round(total_dist, 1),
-        "time_s":           round(total_time, 1),
-        "walk_time_s":      round(walk_time, 1),
-        "rail_time_s":      round(rail_time, 1),
-        "transfer_time_s":  round(transfer_time, 1),
-        "departure_time_s": round(departure_time_s, 0),
-        "arrival_time_s":   round(arrival_time_s, 0),
-        "start_node":       str(start_node),
-        "end_node":         str(end_node),
-        "path_nodes":       path_nodes,
+        "coords": coords_all, "segments": segments,
+        "distance_m": round(total_dist, 1), "time_s": round(total_time, 1),
+        "walk_time_s": round(walk_time, 1), "rail_time_s": round(rail_time, 1), "transfer_time_s": round(transfer_time, 1),
+        "departure_time_s": round(departure_time_s, 0), "arrival_time_s": round(departure_time_s + total_time, 0),
+        "start_node": str(start_node), "end_node": str(end_node), "path_nodes": path_nodes,
     }
