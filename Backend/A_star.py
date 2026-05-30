@@ -94,6 +94,7 @@ def astar_route(
     mode: str = "multimodal",
     blocked: Optional[Set[Tuple[Any, Any]]] = None,
     skipped_stations: Optional[Set[Any]] = None,
+    transfer_issues: Optional[Dict[str, str]] = None,
     departure_time_s: Optional[float] = None,
     start_node: Optional[Any] = None, end_node: Optional[Any] = None,
 ) -> Dict:
@@ -172,6 +173,17 @@ def astar_route(
             if neighbor in skipped: continue
 
             travel_time = edata["travel_time"]
+            raw_node_id = str(neighbor).replace("rail_", "").replace("walk_", "")
+            
+            # Nếu ga này đang bị ùn tắc, cộng thêm thời gian phạt (giây)
+            if raw_node_id in transfer_issues:
+                severity = transfer_issues[raw_node_id]
+                if severity == 'light':
+                    travel_time += 300 # 5 phút
+                elif severity == 'heavy':
+                    travel_time += 900 # 15 phút
+                elif severity == 'extreme':
+                    travel_time += 1800 # 30 phút
             tentative_g = g + travel_time
             if tentative_g < g_score.get(neighbor, float("inf")):
                 g_score[neighbor] = tentative_g

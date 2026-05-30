@@ -223,6 +223,7 @@ def find_route():
     with _admin_lock:
         blocked_nodes = set(_blocked_nodes)
         blocked_edges = set(_blocked_edges)
+        transfer_issues = dict(_transfer_issues)
 
     # Chuyển đổi danh sách trạm bảo trì sang định dạng A* cần
     skipped_stations = set()
@@ -251,7 +252,8 @@ def find_route():
             float(end_lat), float(end_lng),
             mode="multimodal",
             blocked=blocked_edges_set,
-            skipped_stations=skipped_stations
+            skipped_stations=skipped_stations,
+            transfer_issues=transfer_issues
         )
     except ValueError as e:
         return jsonify({"error": str(e)}), 404
