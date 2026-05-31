@@ -1,3 +1,15 @@
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard</title>
+    <script>
+        // Kiểm tra xem trình duyệt có giữ "thẻ ra vào" không
+        if (sessionStorage.getItem("isAdminLoggedIn") !== "true") {
+            // Nếu không có thẻ, lập tức đuổi về trang đăng nhập
+            // (Đảm bảo đường dẫn đến file login.html của bạn là chính xác)
+            window.location.href = "login.html"; 
+        }
+    </script>
+</head>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
