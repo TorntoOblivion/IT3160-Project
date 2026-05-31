@@ -436,3 +436,12 @@ Promise.all([
     console.error("Lỗi nghiêm trọng khi nạp dữ liệu Admin:", err);
     alert("Không thể tải dữ liệu map Admin. Hãy kiểm tra Console (F12) và đường dẫn file JSON.");
 });
+document.getElementById('logout-btn').addEventListener('click', () => {
+    if (confirm("Bạn có chắc chắn muốn đăng xuất khỏi Trạm điều hành?")) {
+        // Tịch thu thẻ
+        sessionStorage.removeItem("isAdminLoggedIn");
+        
+        // Đá về trang đăng nhập
+        window.location.href = "login.html";
+    }
+});
